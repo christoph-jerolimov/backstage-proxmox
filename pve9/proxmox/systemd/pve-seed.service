@@ -1,0 +1,13 @@
+[Unit]
+Description=Seed Proxmox VE with test users, permissions, tokens and guests
+After=pve-cluster.service pvedaemon.service pveproxy.service
+Wants=pveproxy.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pve-seed.sh
+RemainAfterExit=yes
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
