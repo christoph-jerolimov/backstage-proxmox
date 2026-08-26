@@ -1,0 +1,5 @@
+# Runtime output of the Proxmox seed service (contains API token secrets)
+seed-output/*
+!seed-output/.gitkeep
+
+node_modules/
