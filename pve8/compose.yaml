@@ -1,0 +1,55 @@
+# Podman Compose file that starts a single-node Proxmox VE instance for
+# development and API testing (e.g. for the Backstage Proxmox plugin).
+#
+# Start:  podman compose up -d --build   (rootful podman recommended)
+# UI/API: https://localhost:8006  (root / proxmox)
+#
+# On first boot the container seeds itself with test users, groups, roles,
+# ACLs, pools, storages, VMs, LXC containers and API tokens — see
+# proxmox/scripts/pve-seed.sh and the README for details.
+
+services:
+  proxmox:
+    build:
+      context: ./proxmox
+    image: localhost/backstage-proxmox/proxmox-ve:dev
+    container_name: proxmox
+    # The node name in the Proxmox API is derived from the hostname.
+    # Keep it stable ("pve"), otherwise the cluster filesystem breaks
+    # on restarts and all API paths (/nodes/pve/...) change.
+    hostname: pve
+    # Proxmox VE needs systemd, FUSE (pmxcfs mounts /etc/pve) and broad
+    # device/cgroup access — run privileged. This is a throwaway dev box.
+    privileged: true
+    command: /sbin/init
+    stop_signal: SIGRTMIN+3
+    devices:
+      - /dev/fuse
+    tmpfs:
+      - /run
+      - /run/lock
+    environment:
+      # Password for the root@pam login (web UI + API). Re-applied on
+      # every boot by the seed service.
+      PVE_ROOT_PASSWORD: proxmox
+    ports:
+      # Web UI + REST API
+      - "8006:8006"
+    volumes:
+      # pmxcfs database: users, ACLs, tokens, guest configs, certificates
+      - pve-cluster:/var/lib/pve-cluster
+      # "local" storage + seed marker
+      - pve-vz:/var/lib/vz
+      # The seed script exports the generated API tokens here
+      - ./seed-output:/seed-output:z
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-fks", "https://127.0.0.1:8006/"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 90s
+
+volumes:
+  pve-cluster:
+  pve-vz:

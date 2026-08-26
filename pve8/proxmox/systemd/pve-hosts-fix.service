@@ -1,0 +1,13 @@
+[Unit]
+Description=Ensure the container hostname resolves to a non-loopback IP (required by pmxcfs)
+DefaultDependencies=no
+Before=pve-cluster.service
+After=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/pve-hosts-fix.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

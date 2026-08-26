@@ -1,0 +1,74 @@
+# Proxmox VE 8 installed on top of Debian 12 (bookworm), running as a
+# systemd container. This installs the Proxmox packages only (no Proxmox
+# kernel, no ISO, no nested VM) — enough to serve the full REST API on
+# port 8006 for development and integration testing.
+
+FROM docker.io/library/debian:bookworm
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Proxmox VE package repository (no-subscription channel)
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl gnupg jq \
+ && curl -fsSL https://download.proxmox.com/debian/proxmox-release-bookworm.gpg \
+      -o /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg \
+ && echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" \
+      > /etc/apt/sources.list.d/pve-no-subscription.list
+
+# Keep package postinst scripts from starting services during the image build,
+# and answer the postfix installer questions non-interactively.
+RUN printf '#!/bin/sh\nexit 101\n' > /usr/sbin/policy-rc.d \
+ && chmod +x /usr/sbin/policy-rc.d \
+ && echo "postfix postfix/main_mailer_type select Local only" | debconf-set-selections \
+ && echo "postfix postfix/mailname string pve.localdomain" | debconf-set-selections
+
+# pve-manager pulls in the whole API stack: pve-cluster (pmxcfs), pvedaemon,
+# pveproxy, pvestatd, qemu-server, pve-container, pveum/pvesh CLIs, ...
+# systemd-sysv provides /sbin/init.
+RUN apt-get update \
+ && apt-get install -y pve-manager postfix systemd-sysv \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# Disable services that make no sense (or only produce errors) inside a
+# container: host networking, HA/cluster daemons, firewall, hardware bits.
+RUN systemctl mask \
+      networking.service \
+      ssh.service \
+      corosync.service \
+      pve-firewall.service \
+      pve-ha-crm.service \
+      pve-ha-lrm.service \
+      pve-guests.service \
+      apparmor.service \
+      watchdog-mux.service \
+      lxc-monitord.service \
+      lxcfs.service \
+      rpcbind.service \
+      rpcbind.socket \
+      iscsid.service \
+      open-iscsi.service \
+      smartmontools.service \
+      zfs-mount.service \
+      zfs-import-cache.service \
+      zfs-import-scan.service \
+      zfs-zed.service
+
+# Directory for the extra "backup" dir-storage (recreated on every boot,
+# since it intentionally lives outside the persisted volumes).
+RUN printf 'd /srv/pve-backup 0755 root root -\n' > /etc/tmpfiles.d/pve-dev.conf
+
+# First-boot helpers: fix /etc/hosts for pmxcfs and seed the test data.
+COPY scripts/pve-hosts-fix.sh /usr/local/bin/pve-hosts-fix.sh
+COPY scripts/pve-seed.sh /usr/local/bin/pve-seed.sh
+COPY systemd/pve-hosts-fix.service /etc/systemd/system/pve-hosts-fix.service
+COPY systemd/pve-seed.service /etc/systemd/system/pve-seed.service
+RUN chmod +x /usr/local/bin/pve-hosts-fix.sh /usr/local/bin/pve-seed.sh \
+ && systemctl enable pve-hosts-fix.service pve-seed.service
+
+# Allow services to start normally at runtime again.
+RUN rm -f /usr/sbin/policy-rc.d
+
+EXPOSE 8006
+STOPSIGNAL SIGRTMIN+3
+CMD ["/sbin/init"]
