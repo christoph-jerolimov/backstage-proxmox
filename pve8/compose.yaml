@@ -12,6 +12,11 @@ services:
   proxmox:
     build:
       context: ./proxmox
+      args:
+        # Optional: fetch the Proxmox repository signing key from somewhere
+        # else (internal mirror, air-gapped build host). Empty = use the
+        # official Proxmox sources.
+        PROXMOX_KEY_URL: ${PROXMOX_KEY_URL:-}
     image: localhost/backstage-proxmox/proxmox-ve:dev
     container_name: proxmox
     # The node name in the Proxmox API is derived from the hostname.

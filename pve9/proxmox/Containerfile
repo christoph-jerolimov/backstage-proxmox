@@ -14,12 +14,25 @@ FROM docker.io/library/debian:${DEBIAN_SUITE}
 ARG DEBIAN_SUITE
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Proxmox VE package repository (no-subscription channel)
-RUN apt-get update \
+# Proxmox VE package repository (no-subscription channel).
+#
+# The signing key is downloaded by fetch-release-key.sh, which knows where
+# Proxmox actually serves it over working HTTPS — https://download.proxmox.com
+# has no certificate for that hostname and fails with "SSL: no alternative
+# certificate subject name matches target host name". Set PROXMOX_KEY_URL to
+# override the source (internal mirror, air-gapped build, ...).
+#
+# The repository itself stays on plain HTTP on purpose: apt verifies the
+# Release file against the keyring above, and download.proxmox.com cannot be
+# used over HTTPS for the reason just described.
+ARG PROXMOX_KEY_URL=
+COPY scripts/fetch-release-key.sh /usr/local/bin/fetch-release-key.sh
+RUN chmod +x /usr/local/bin/fetch-release-key.sh \
+ && apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg jq \
- && curl -fsSL "https://download.proxmox.com/debian/proxmox-release-${DEBIAN_SUITE}.gpg" \
-      -o "/etc/apt/trusted.gpg.d/proxmox-release-${DEBIAN_SUITE}.gpg" \
- && echo "deb http://download.proxmox.com/debian/pve ${DEBIAN_SUITE} pve-no-subscription" \
+ && PROXMOX_KEY_URL="${PROXMOX_KEY_URL}" /usr/local/bin/fetch-release-key.sh \
+      "${DEBIAN_SUITE}" /usr/share/keyrings/proxmox-archive-keyring.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/proxmox-archive-keyring.gpg] http://download.proxmox.com/debian/pve ${DEBIAN_SUITE} pve-no-subscription" \
       > /etc/apt/sources.list.d/pve-no-subscription.list
 
 # Keep package postinst scripts from starting services during the image build,

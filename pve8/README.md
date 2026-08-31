@@ -206,6 +206,19 @@ self-signed certificate in dev.
 
 ## Troubleshooting
 
+- **Build fails with `curl: (60) SSL: no alternative certificate subject name
+  matches target host name 'download.proxmox.com'`** — `download.proxmox.com`
+  does not serve a TLS certificate for its own hostname, so the repository
+  signing key cannot be fetched from there over HTTPS.
+  `proxmox/scripts/fetch-release-key.sh` gets it from
+  `enterprise.proxmox.com` instead (the host the Proxmox admin guide points
+  at) and only falls back to `download.proxmox.com`. If your network
+  intercepts TLS, either add the proxy CA to the build, or point the build at
+  a reachable copy of the key:
+  ```bash
+  PROXMOX_KEY_URL=https://mirror.example.com/proxmox-release.gpg \
+    podman compose build
+  ```
 - **Container restarts / `pve-cluster` fails** — check
   `sudo podman exec proxmox journalctl -u pve-cluster`. pmxcfs needs
   `/dev/fuse` and a hostname that resolves to a non-loopback IP; both are
