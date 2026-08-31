@@ -3,7 +3,12 @@ import { ProxmoxClient } from '../client/ProxmoxClient';
 /** A pool as Proxmox reports it, with its members. */
 export type ProxmoxPool = {
   comment?: string;
-  members?: Array<{ vmid?: number; storage?: string; type?: string; id?: string }>;
+  members?: Array<{
+    vmid?: number;
+    storage?: string;
+    type?: string;
+    id?: string;
+  }>;
 };
 
 /** Reads a pool, including its current members. */
@@ -12,7 +17,8 @@ export async function readPool(
   poolid: string,
 ): Promise<ProxmoxPool> {
   return (
-    (await client.get<ProxmoxPool>(`/pools/${encodeURIComponent(poolid)}`)) ?? {}
+    (await client.get<ProxmoxPool>(`/pools/${encodeURIComponent(poolid)}`)) ??
+    {}
   );
 }
 
@@ -34,11 +40,15 @@ export async function addPoolMembers(
     members.filter(m => typeof m.vmid === 'number').map(m => m.vmid as number),
   );
   const existingStorages = new Set(
-    members.filter(m => typeof m.storage === 'string').map(m => m.storage as string),
+    members
+      .filter(m => typeof m.storage === 'string')
+      .map(m => m.storage as string),
   );
 
   const newVmids = vmids.filter(vmid => !existingVmids.has(vmid));
-  const newStorages = storages.filter(storage => !existingStorages.has(storage));
+  const newStorages = storages.filter(
+    storage => !existingStorages.has(storage),
+  );
 
   if (newVmids.length === 0 && newStorages.length === 0) {
     return pool;

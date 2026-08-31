@@ -56,7 +56,9 @@ export async function waitForProxmoxTask(options: {
 
   for (;;) {
     const status = await client.get<ProxmoxTaskStatus>(
-      `/nodes/${encodeURIComponent(node)}/tasks/${encodeURIComponent(taskId)}/status`,
+      `/nodes/${encodeURIComponent(node)}/tasks/${encodeURIComponent(
+        taskId,
+      )}/status`,
     );
 
     if (status?.status === 'stopped') {

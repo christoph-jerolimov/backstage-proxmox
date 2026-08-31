@@ -16,14 +16,15 @@ import {
 export function redactSecrets(text: string, secrets: string[]): string {
   return secrets
     .filter(secret => secret.length > 0)
-    .reduce(
-      (acc, secret) => acc.split(secret).join('[REDACTED]'),
-      text,
-    );
+    .reduce((acc, secret) => acc.split(secret).join('[REDACTED]'), text);
 }
 
 /** Extracts the most useful message Proxmox returned for a failed request. */
-export function proxmoxErrorMessage(status: number, statusText: string, body: unknown): string {
+export function proxmoxErrorMessage(
+  status: number,
+  statusText: string,
+  body: unknown,
+): string {
   if (typeof body === 'string' && body.trim()) {
     return body.trim();
   }
@@ -78,8 +79,12 @@ export function proxmoxError(options: {
         `Proxmox has no resource for ${where} (HTTP 404): ${detail}`,
       );
     case 409:
-      return new ConflictError(`Proxmox reported a conflict for ${where}: ${detail}`);
+      return new ConflictError(
+        `Proxmox reported a conflict for ${where}: ${detail}`,
+      );
     default:
-      return new Error(`Proxmox request failed for ${where} (HTTP ${status}): ${detail}`);
+      return new Error(
+        `Proxmox request failed for ${where} (HTTP ${status}): ${detail}`,
+      );
   }
 }

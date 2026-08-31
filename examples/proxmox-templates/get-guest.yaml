@@ -1,0 +1,62 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-get-guest
+  title: Proxmox — Get Guest
+  description: |
+    Reads the configuration and status of a Proxmox VM or LXC container.
+    Invokes the `proxmox:get-guest` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Guest
+      required:
+        - node
+        - vmid
+        - guestType
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        node:
+          title: Node
+          type: string
+          description: Name of the Proxmox node
+          default: pve
+        vmid:
+          title: VMID
+          type: number
+          description: Numeric id of the guest
+          default: 101
+        guestType:
+          title: Guest type
+          type: string
+          enum:
+            - qemu
+            - lxc
+          default: qemu
+
+  steps:
+    - id: action
+      name: Read guest
+      action: proxmox:get-guest
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        vmid: ${{ parameters.vmid }}
+        guestType: ${{ parameters.guestType }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Guest
+        content: "${{ steps['action'].output.name }} (${{ steps['action'].output.guestType }}/${{ steps['action'].output.vmid }}) is ${{ steps['action'].output.status }}"
+      - title: Configuration
+        content: |
+          ${{ steps['action'].output.config | dump }}

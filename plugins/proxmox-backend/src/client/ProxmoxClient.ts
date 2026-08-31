@@ -41,7 +41,11 @@ export function encodeParams(params: ProxmoxParams): string {
     if (value === undefined) {
       continue;
     }
-    search.append(key, typeof value === 'boolean' ? (value ? '1' : '0') : String(value));
+    if (typeof value === 'boolean') {
+      search.append(key, value ? '1' : '0');
+    } else {
+      search.append(key, String(value));
+    }
   }
   return search.toString();
 }
@@ -83,7 +87,7 @@ export class ProxmoxClient {
     const client = new ProxmoxClient(
       connection,
       logger,
-      (options.fetchApi ?? (undiciFetch as unknown as ProxmoxFetch)),
+      options.fetchApi ?? (undiciFetch as unknown as ProxmoxFetch),
       dispatcher,
     );
     client.warnAboutTlsVerification();
@@ -161,7 +165,10 @@ export class ProxmoxClient {
       throw new Error('A ticket can only be obtained for password auth');
     }
 
-    const data = await this.send<{ ticket: string; CSRFPreventionToken: string }>(
+    const data = await this.send<{
+      ticket: string;
+      CSRFPreventionToken: string;
+    }>(
       'POST',
       TICKET_PATH,
       { username: auth.username, password: auth.password },
@@ -193,14 +200,20 @@ export class ProxmoxClient {
     headers: Record<string, string>,
     operation: string,
   ): Promise<T> {
-    const url = `${this.connection.baseUrl.replace(/\/+$/, '')}/api2/json${path}`;
-    const body = params && Object.keys(params).length ? encodeParams(params) : undefined;
+    const url = `${this.connection.baseUrl.replace(
+      /\/+$/,
+      '',
+    )}/api2/json${path}`;
+    const body =
+      params && Object.keys(params).length ? encodeParams(params) : undefined;
 
     const response = await this.fetchApi(url, {
       method,
       headers: {
         Accept: 'application/json',
-        ...(body ? { 'Content-Type': 'application/x-www-form-urlencoded' } : {}),
+        ...(body
+          ? { 'Content-Type': 'application/x-www-form-urlencoded' }
+          : {}),
         ...headers,
       },
       ...(body ? { body } : {}),
@@ -227,7 +240,9 @@ export class ProxmoxClient {
     }
 
     this.logger?.debug(
-      this.redact(`Proxmox ${operation} succeeded on "${this.connection.title}"`),
+      this.redact(
+        `Proxmox ${operation} succeeded on "${this.connection.title}"`,
+      ),
     );
 
     return (parsed as { data?: T } | undefined)?.data as T;

@@ -91,11 +91,20 @@ export function taskFields(z: Zod) {
 /** The fields that identify a guest. */
 export function guestFields(z: Zod) {
   return {
-    node: z.string().min(1).describe('Name of the Proxmox node, for example "pve"'),
-    vmid: z.number().int().min(100).describe('Numeric id of the VM or container'),
+    node: z
+      .string()
+      .min(1)
+      .describe('Name of the Proxmox node, for example "pve"'),
+    vmid: z
+      .number()
+      .int()
+      .min(100)
+      .describe('Numeric id of the VM or container'),
     guestType: z
       .enum(['qemu', 'lxc'])
-      .describe('Whether the guest is a QEMU VM ("qemu") or an LXC container ("lxc")'),
+      .describe(
+        'Whether the guest is a QEMU VM ("qemu") or an LXC container ("lxc")',
+      ),
   };
 }
 
@@ -104,11 +113,15 @@ export function taskOutputFields(z: Zod) {
   return {
     taskId: z
       .string()
-      .describe('Proxmox task id (UPID); empty when the operation was synchronous'),
+      .describe(
+        'Proxmox task id (UPID); empty when the operation was synchronous',
+      ),
     exitStatus: z
       .string()
       .optional()
-      .describe('Exit status Proxmox reported for the task, when it was awaited'),
+      .describe(
+        'Exit status Proxmox reported for the task, when it was awaited',
+      ),
   };
 }
 
@@ -141,6 +154,10 @@ export function requireAtLeastOneField(
 }
 
 /** The Proxmox API path segment for a guest type. */
-export function guestPath(node: string, guestType: 'qemu' | 'lxc', vmid: number) {
+export function guestPath(
+  node: string,
+  guestType: 'qemu' | 'lxc',
+  vmid: number,
+) {
   return `/nodes/${encodeURIComponent(node)}/${guestType}/${vmid}`;
 }

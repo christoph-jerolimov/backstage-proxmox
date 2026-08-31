@@ -29,9 +29,13 @@ export function registerGetGuest(
           vmid: z.number(),
           guestType: z.string(),
           name: z.string().optional().describe('VM name or container hostname'),
-          status: z.string().describe('Current status, for example "running" or "stopped"'),
+          status: z
+            .string()
+            .describe('Current status, for example "running" or "stopped"'),
           uptime: z.number().optional().describe('Uptime in seconds'),
-          config: z.record(z.any()).describe('The guest configuration as Proxmox reports it'),
+          config: z
+            .record(z.any())
+            .describe('The guest configuration as Proxmox reports it'),
         }),
     },
     action: async ({ input }) => {
@@ -39,7 +43,9 @@ export function registerGetGuest(
       const base = guestPath(input.node, input.guestType, input.vmid);
 
       const status = await client.get<GuestStatus>(`${base}/status/current`);
-      const config = await client.get<Record<string, unknown>>(`${base}/config`);
+      const config = await client.get<Record<string, unknown>>(
+        `${base}/config`,
+      );
 
       return {
         output: {

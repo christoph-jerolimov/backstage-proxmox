@@ -100,13 +100,17 @@ describe('Proxmox action registration', () => {
           type: 'proxmox',
           title: 'One',
           baseUrl: 'https://one.example.com:8006',
-          auth: [{ method: 'token', tokenId: 'root@pam!t', secret: 'secret-one' }],
+          auth: [
+            { method: 'token', tokenId: 'root@pam!t', secret: 'secret-one' },
+          ],
         },
         {
           type: 'proxmox',
           title: 'Two',
           baseUrl: 'https://two.example.com:8006',
-          auth: [{ method: 'token', tokenId: 'root@pam!t', secret: 'secret-two' }],
+          auth: [
+            { method: 'token', tokenId: 'root@pam!t', secret: 'secret-two' },
+          ],
         },
       ],
     });
@@ -124,13 +128,17 @@ describe('Proxmox action registration', () => {
           type: 'proxmox',
           title: 'One',
           baseUrl: 'https://one.example.com:8006',
-          auth: [{ method: 'token', tokenId: 'root@pam!t', secret: 'secret-one' }],
+          auth: [
+            { method: 'token', tokenId: 'root@pam!t', secret: 'secret-one' },
+          ],
         },
         {
           type: 'proxmox',
           title: 'Two',
           baseUrl: 'https://two.example.com:8006',
-          auth: [{ method: 'token', tokenId: 'root@pam!t', secret: 'secret-two' }],
+          auth: [
+            { method: 'token', tokenId: 'root@pam!t', secret: 'secret-two' },
+          ],
         },
       ],
     });
@@ -141,9 +149,9 @@ describe('Proxmox action registration', () => {
   it('rejects input that does not match the schema before calling Proxmox', async () => {
     const { invoke, proxmox } = setupActions();
 
-    await expect(invoke('get-guest', { node: 'pve', vmid: 101 })).rejects.toThrow(
-      /Invalid input/,
-    );
+    await expect(
+      invoke('get-guest', { node: 'pve', vmid: 101 }),
+    ).rejects.toThrow(/Invalid input/);
     expect(proxmox.requests).toHaveLength(0);
   });
 });

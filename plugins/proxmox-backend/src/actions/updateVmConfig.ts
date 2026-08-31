@@ -31,12 +31,23 @@ export function registerUpdateVmConfig(
           node: z.string().min(1).describe('Name of the Proxmox node'),
           vmid: z.number().int().min(100).describe('VMID of the VM to update'),
           name: z.string().optional().describe('New name for the VM'),
-          cores: z.number().int().min(1).optional().describe('CPU cores per socket'),
+          cores: z
+            .number()
+            .int()
+            .min(1)
+            .optional()
+            .describe('CPU cores per socket'),
           sockets: z.number().int().min(1).optional().describe('CPU sockets'),
           memory: z.number().int().min(16).optional().describe('Memory in MiB'),
           tags: z.string().optional().describe('Semicolon separated tags'),
-          description: z.string().optional().describe('Description shown in Proxmox'),
-          pool: z.string().optional().describe('Resource pool the VM should belong to'),
+          description: z
+            .string()
+            .optional()
+            .describe('Description shown in Proxmox'),
+          pool: z
+            .string()
+            .optional()
+            .describe('Resource pool the VM should belong to'),
           ...taskFields(z),
         }),
       output: z =>
@@ -44,7 +55,9 @@ export function registerUpdateVmConfig(
           ...connectionOutputField(z),
           node: z.string(),
           vmid: z.number(),
-          config: z.record(z.any()).describe('The VM configuration after the update'),
+          config: z
+            .record(z.any())
+            .describe('The VM configuration after the update'),
           ...taskOutputFields(z),
         }),
     },
@@ -65,7 +78,9 @@ export function registerUpdateVmConfig(
       const client = await clientFor(deps, input.connection);
       const base = guestPath(input.node, 'qemu', input.vmid);
 
-      let task = { taskId: '' } as Awaited<ReturnType<typeof resolveProxmoxTask>>;
+      let task = { taskId: '' } as Awaited<
+        ReturnType<typeof resolveProxmoxTask>
+      >;
       if (Object.keys(changes).length > 0) {
         logger.info(
           `Updating configuration of Proxmox VM ${input.vmid} on node ${input.node}`,
@@ -87,7 +102,9 @@ export function registerUpdateVmConfig(
         await addPoolMembers(client as ProxmoxClient, input.pool, [input.vmid]);
       }
 
-      const config = await client.get<Record<string, unknown>>(`${base}/config`);
+      const config = await client.get<Record<string, unknown>>(
+        `${base}/config`,
+      );
 
       return {
         output: {

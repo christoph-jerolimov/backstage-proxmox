@@ -72,9 +72,9 @@ Auth methods: `token` (`tokenId`, `secret`) and `password` (`username`, `passwor
 
 Proxmox write endpoints return a UPID string rather than a result. A shared helper posts the request, then polls `/nodes/{node}/tasks/{upid}/status` with a bounded backoff until `status === 'stopped'`, and fails unless `exitstatus === 'OK'`. Every write action takes `waitForCompletion` (default `true`) and `timeoutSeconds` (default 300) and returns `taskId`. Without this, a template step would report success for a Proxmox job that failed seconds later — the single most likely way for this plugin to lie to a user. The UPID is always returned, including on timeout, so the operation stays traceable in Proxmox.
 
-### D6 — `fetch` with a per-connection agent, not a Proxmox SDK
+### D6 — `fetch` with a per-connection dispatcher, not a Proxmox SDK
 
-A thin `ProxmoxClient` over Node's `fetch`, constructed per connection with an `https.Agent` carrying `rejectUnauthorized` and any `ca` from `caFile`. Proxmox's API is a flat, well-documented REST surface with form-encoded request bodies and a `{ data: ... }` envelope; existing Node clients for it are thin, unmaintained or both, and would still need the UPID and auth handling written here. Keeping it in-repo also keeps the dependency footprint at zero beyond what the backend already has.
+A thin `ProxmoxClient` over `fetch`, constructed per connection with a TLS dispatcher carrying `rejectUnauthorized` and any `ca` from `caFile`. This is undici's `fetch` and undici's `Agent`, **not** Node's global `fetch` with an `https.Agent` as first drafted: the global `fetch` is undici-backed and ignores an `https.Agent` entirely, and an `Agent` from the npm `undici` package is only reliably accepted by that package's own `fetch`. `undici` is therefore a direct dependency (it is already in the lockfile transitively), and the client takes an injectable `fetchApi` so tests run against a fake without touching the network. Proxmox's API is a flat, well-documented REST surface with form-encoded request bodies and a `{ data: ... }` envelope; existing Node clients for it are thin, unmaintained or both, and would still need the UPID and auth handling written here. Keeping it in-repo also keeps the dependency footprint to that one package.
 
 ### D7 — TLS verification on by default, opt-out per connection
 
@@ -90,7 +90,7 @@ The scaffolder bridge invokes with `{ id, input, credentials }` and no secrets, 
 
 ### D10 — Templates as flat example files, one step each
 
-`examples/proxmox-templates/<action>.yaml`, one template per action, each with a single step and the action's inputs as parameters, registered as catalog locations alongside the existing `examples/template/template.yaml`. Single-step templates keep each template a test of exactly one action; a combined "provision a VM" template would be nicer to use but would stop being a per-action test the moment one step failed. Optional parameters are conditionally spread into the step input so blank fields are omitted rather than sent empty.
+`examples/proxmox-templates/<action>.yaml`, one template per action, each with a single step and the action's inputs as parameters, registered as catalog locations alongside the existing `examples/template/template.yaml`. Single-step templates keep each template a test of exactly one action; a combined "provision a VM" template would be nicer to use but would stop being a per-action test the moment one step failed. Blank optional parameters need no special handling in the templates: the scaffolder renders step inputs through `JSON.parse(JSON.stringify(input), …)`, and a reviver returning `undefined` deletes the key, so an unset parameter is dropped rather than sent as an empty value. This was confirmed end to end rather than assumed — running the create-VM template with only `node` and `name` posts exactly `vmid` and `name` to Proxmox — so no empty-string coercion is needed in the action schemas.
 
 ### D11 — Unit tests against a mocked Proxmox, dev instances for manual verification
 

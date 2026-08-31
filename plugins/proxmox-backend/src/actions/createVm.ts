@@ -52,32 +52,57 @@ export function registerCreateVm(
       input: z =>
         z.object({
           ...connectionField(z),
-          node: z.string().min(1).describe('Name of the Proxmox node, for example "pve"'),
+          node: z
+            .string()
+            .min(1)
+            .describe('Name of the Proxmox node, for example "pve"'),
           name: z.string().min(1).describe('Name of the new VM'),
           vmid: z
             .number()
             .int()
             .min(100)
             .optional()
-            .describe('VMID to use. Left out, the next free VMID is allocated.'),
-          cores: z.number().int().min(1).optional().describe('CPU cores per socket'),
+            .describe(
+              'VMID to use. Left out, the next free VMID is allocated.',
+            ),
+          cores: z
+            .number()
+            .int()
+            .min(1)
+            .optional()
+            .describe('CPU cores per socket'),
           sockets: z.number().int().min(1).optional().describe('CPU sockets'),
           memory: z.number().int().min(16).optional().describe('Memory in MiB'),
           ostype: z
             .string()
             .optional()
-            .describe('Proxmox OS type, for example "l26" for Linux 6.x/5.x/4.x/3.x/2.6'),
+            .describe(
+              'Proxmox OS type, for example "l26" for Linux 6.x/5.x/4.x/3.x/2.6',
+            ),
           net0: z
             .string()
             .optional()
-            .describe('First network device, for example "virtio,bridge=vmbr0"'),
+            .describe(
+              'First network device, for example "virtio,bridge=vmbr0"',
+            ),
           disk: z
             .string()
             .optional()
-            .describe('First SCSI disk, for example "local:8" for an 8 GiB volume'),
-          tags: z.string().optional().describe('Semicolon separated tags, for example "web;dev"'),
-          pool: z.string().optional().describe('Resource pool to add the VM to'),
-          description: z.string().optional().describe('Description shown in Proxmox'),
+            .describe(
+              'First SCSI disk, for example "local:8" for an 8 GiB volume',
+            ),
+          tags: z
+            .string()
+            .optional()
+            .describe('Semicolon separated tags, for example "web;dev"'),
+          pool: z
+            .string()
+            .optional()
+            .describe('Resource pool to add the VM to'),
+          description: z
+            .string()
+            .optional()
+            .describe('Description shown in Proxmox'),
           ...taskFields(z),
         }),
       output: z =>
@@ -93,7 +118,9 @@ export function registerCreateVm(
       const client = await clientFor(deps, input.connection);
       const vmid = await resolveVmid(client, input.vmid);
 
-      logger.info(`Creating Proxmox VM ${vmid} ("${input.name}") on node ${input.node}`);
+      logger.info(
+        `Creating Proxmox VM ${vmid} ("${input.name}") on node ${input.node}`,
+      );
 
       const taskId = await client.post<string>(
         `/nodes/${encodeURIComponent(input.node)}/qemu`,

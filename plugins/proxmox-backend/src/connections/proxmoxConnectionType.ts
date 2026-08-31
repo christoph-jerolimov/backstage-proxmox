@@ -107,7 +107,9 @@ export type ProxmoxConnectionConfig = z.infer<typeof connectionConfigSchema>;
 /** A resolved auth entry, with the title the connection type guarantees. */
 export type ProxmoxAuthValue =
   | ({ method: 'token'; title: string } & z.infer<typeof tokenAuthSchema>)
-  | ({ method: 'password'; title: string } & z.infer<typeof passwordAuthSchema>);
+  | ({ method: 'password'; title: string } & z.infer<
+      typeof passwordAuthSchema
+    >);
 
 /** Restricts a connection or auth entry to a set of plugins. */
 export type ProxmoxConnectionMatch = { plugins: string[] };

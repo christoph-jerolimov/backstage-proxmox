@@ -37,8 +37,16 @@ describe('DefaultProxmoxConnectionsService', () => {
   it('lists the titles when several are configured and none is selected', async () => {
     await expect(
       service(
-        { title: 'One', baseUrl: 'https://one.example.com:8006', auth: [token] },
-        { title: 'Two', baseUrl: 'https://two.example.com:8006', auth: [token] },
+        {
+          title: 'One',
+          baseUrl: 'https://one.example.com:8006',
+          auth: [token],
+        },
+        {
+          title: 'Two',
+          baseUrl: 'https://two.example.com:8006',
+          auth: [token],
+        },
       ).find({ type: 'proxmox', query: {}, authMethods: both }),
     ).rejects.toThrow(/must be selected: "One", "Two"/);
   });
@@ -59,9 +67,11 @@ describe('DefaultProxmoxConnectionsService', () => {
 
   it('fails when no connection matches the selector', async () => {
     await expect(
-      service({ title: 'One', baseUrl: 'https://one.example.com:8006', auth: [token] }).find(
-        { type: 'proxmox', query: { title: 'Nope' }, authMethods: both },
-      ),
+      service({
+        title: 'One',
+        baseUrl: 'https://one.example.com:8006',
+        auth: [token],
+      }).find({ type: 'proxmox', query: { title: 'Nope' }, authMethods: both }),
     ).rejects.toThrow(/No Proxmox connection matches "Nope".*"One"/s);
   });
 
@@ -95,7 +105,9 @@ describe('DefaultProxmoxConnectionsService', () => {
         query: {},
         authMethods: ['token'],
       }),
-    ).rejects.toThrow(/no acceptable auth method; wanted one of token but it configures password/);
+    ).rejects.toThrow(
+      /no acceptable auth method; wanted one of token but it configures password/,
+    );
   });
 
   it('returns exactly one auth entry, not the configured list', async () => {
@@ -105,6 +117,9 @@ describe('DefaultProxmoxConnectionsService', () => {
     }).find({ type: 'proxmox', query: {}, authMethods: both });
 
     expect(Array.isArray(found.auth)).toBe(false);
-    expect(found.auth).toMatchObject({ method: 'token', tokenId: 'root@pam!t' });
+    expect(found.auth).toMatchObject({
+      method: 'token',
+      tokenId: 'root@pam!t',
+    });
   });
 });

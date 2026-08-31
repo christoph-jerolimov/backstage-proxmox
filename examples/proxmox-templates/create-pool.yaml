@@ -1,0 +1,46 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-create-pool
+  title: Proxmox — Create Resource Pool
+  description: |
+    Creates a Proxmox resource pool.
+    Invokes the `proxmox:create-pool` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Resource pool
+      required:
+        - poolid
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        poolid:
+          title: Pool id
+          type: string
+          description: For example pool-staging
+        comment:
+          title: Comment
+          type: string
+
+  steps:
+    - id: action
+      name: Create pool
+      action: proxmox:create-pool
+      input:
+        connection: ${{ parameters.connection }}
+        poolid: ${{ parameters.poolid }}
+        comment: ${{ parameters.comment }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Created pool
+        content: ${{ steps['action'].output.poolid }}

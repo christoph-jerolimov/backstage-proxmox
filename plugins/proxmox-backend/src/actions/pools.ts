@@ -10,7 +10,6 @@ import {
 } from './helpers';
 import { addPoolMembers } from './poolMembers';
 
-
 export function registerCreatePool(
   actionsRegistry: ActionsRegistryService,
   deps: ProxmoxActionDeps,
@@ -24,7 +23,10 @@ export function registerCreatePool(
       input: z =>
         z.object({
           ...connectionField(z),
-          poolid: z.string().min(1).describe('Id of the pool, for example "pool-dev"'),
+          poolid: z
+            .string()
+            .min(1)
+            .describe('Id of the pool, for example "pool-dev"'),
           comment: z.string().optional().describe('Comment shown in Proxmox'),
         }),
       output: z =>
@@ -36,7 +38,8 @@ export function registerCreatePool(
     action: async ({ input, logger }) => {
       const client = await clientFor(deps, input.connection);
 
-      const pools = (await client.get<Array<{ poolid: string }>>('/pools')) ?? [];
+      const pools =
+        (await client.get<Array<{ poolid: string }>>('/pools')) ?? [];
       if (pools.some(pool => pool.poolid === input.poolid)) {
         throw new ConflictError(
           `Proxmox resource pool "${input.poolid}" already exists`,
@@ -44,10 +47,13 @@ export function registerCreatePool(
       }
 
       logger.info(`Creating Proxmox resource pool "${input.poolid}"`);
-      await client.post('/pools', definedOnly({
-        poolid: input.poolid,
-        comment: input.comment,
-      }));
+      await client.post(
+        '/pools',
+        definedOnly({
+          poolid: input.poolid,
+          comment: input.comment,
+        }),
+      );
 
       return {
         output: {
@@ -88,7 +94,10 @@ export function registerUpdatePool(
         z.object({
           ...connectionOutputField(z),
           poolid: z.string(),
-          comment: z.string().optional().describe('Comment of the pool after the update'),
+          comment: z
+            .string()
+            .optional()
+            .describe('Comment of the pool after the update'),
           members: z
             .array(
               z.object({
@@ -113,7 +122,9 @@ export function registerUpdatePool(
       const client = await clientFor(deps, input.connection);
 
       if (input.comment !== undefined) {
-        logger.info(`Updating comment of Proxmox resource pool "${input.poolid}"`);
+        logger.info(
+          `Updating comment of Proxmox resource pool "${input.poolid}"`,
+        );
         await client.put(`/pools/${encodeURIComponent(input.poolid)}`, {
           comment: input.comment,
         });

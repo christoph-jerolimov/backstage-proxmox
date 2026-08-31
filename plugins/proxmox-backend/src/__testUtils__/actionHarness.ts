@@ -1,5 +1,6 @@
 import { actionsRegistryServiceMock } from '@backstage/backend-test-utils/alpha';
 import { mockServices } from '@backstage/backend-test-utils';
+import { JsonObject } from '@backstage/types';
 import { ConfigReader } from '@backstage/config';
 import { registerProxmoxActions } from '../actions';
 import { ProxmoxClient } from '../client/ProxmoxClient';
@@ -50,14 +51,18 @@ export function setupActions(options?: {
     sleep: async () => {},
   });
 
-  const invoke = (name: string, input: Record<string, unknown> = {}) =>
+  const invoke = (name: string, input: JsonObject = {}) =>
     registry.invoke({ id: `test:${name}`, input });
 
   return { registry, proxmox, invoke };
 }
 
 /** A task that Proxmox reports as finished successfully. */
-export function completedTask(proxmox: FakeProxmox, node: string, taskId: string) {
+export function completedTask(
+  proxmox: FakeProxmox,
+  node: string,
+  taskId: string,
+) {
   return proxmox.on(
     'GET',
     `/nodes/${node}/tasks/${encodeURIComponent(taskId)}/status`,

@@ -26,14 +26,19 @@ function describe(error: unknown): string {
   if (error instanceof z.ZodError) {
     return error.errors
       .map(issue =>
-        issue.path.length ? `${issue.path.join('.')}: ${issue.message}` : issue.message,
+        issue.path.length
+          ? `${issue.path.join('.')}: ${issue.message}`
+          : issue.message,
       )
       .join('; ');
   }
   return error instanceof Error ? error.message : String(error);
 }
 
-function readMatch(value: unknown, label: string): ProxmoxConnectionMatch | undefined {
+function readMatch(
+  value: unknown,
+  label: string,
+): ProxmoxConnectionMatch | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -53,10 +58,7 @@ function matchesThisPlugin(match: ProxmoxConnectionMatch | undefined): boolean {
   return !match || match.plugins.includes(PROXMOX_PLUGIN_ID);
 }
 
-function validateAuth(
-  rawAuth: unknown,
-  label: string,
-): ProxmoxAuthValue[] {
+function validateAuth(rawAuth: unknown, label: string): ProxmoxAuthValue[] {
   if (!Array.isArray(rawAuth) || rawAuth.length === 0) {
     throw new InputError(
       `${label} must configure at least one auth method under "auth"`,
@@ -88,7 +90,9 @@ function validateAuth(
           .join(', ')}`,
       );
     }
-    if (!matchesThisPlugin(readMatch(rawAuthMatch, `${label} auth "${method}"`))) {
+    if (
+      !matchesThisPlugin(readMatch(rawAuthMatch, `${label} auth "${method}"`))
+    ) {
       continue;
     }
 
@@ -126,7 +130,9 @@ function validateConnection(
   } = raw as Record<string, unknown>;
 
   const title = typeof rawTitle === 'string' && rawTitle ? rawTitle : undefined;
-  const label = `Proxmox connection ${title ? `"${title}"` : `at "${source}[${index}]"`}`;
+  const label = `Proxmox connection ${
+    title ? `"${title}"` : `at "${source}[${index}]"`
+  }`;
 
   const match = readMatch(rawMatch, label);
   if (!matchesThisPlugin(match)) {
@@ -169,7 +175,9 @@ function readRawEntries(
     const type = (entry as { type?: unknown } | null)?.type;
     // Entries of other connection types belong to other consumers of the
     // connections config and are none of this plugin's business.
-    return onlyProxmoxType ? type === 'proxmox' : type === undefined || type === 'proxmox';
+    return onlyProxmoxType
+      ? type === 'proxmox'
+      : type === undefined || type === 'proxmox';
   });
 }
 
@@ -205,7 +213,9 @@ export function resolveProxmoxConnections(options: {
     ...readRawEntries(config, 'connections', true).map(
       (entry, index) => [entry, 'connections' as const, index] as const,
     ),
-    ...readRawEntries(config, 'proxmox.connections', false).map((entry, index) => [entry, 'proxmox.connections' as const, index] as const),
+    ...readRawEntries(config, 'proxmox.connections', false).map(
+      (entry, index) => [entry, 'proxmox.connections' as const, index] as const,
+    ),
   ].map(entry => [...entry] as [unknown, ProxmoxConnectionSource, number]);
 
   const connections: ResolvedProxmoxConnection[] = [];

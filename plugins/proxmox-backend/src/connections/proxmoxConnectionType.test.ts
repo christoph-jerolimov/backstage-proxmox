@@ -1,4 +1,7 @@
-import { getProxmoxAuthMethod, proxmoxConnectionType } from './proxmoxConnectionType';
+import {
+  getProxmoxAuthMethod,
+  proxmoxConnectionType,
+} from './proxmoxConnectionType';
 
 describe('proxmoxConnectionType', () => {
   const { configSchema } = proxmoxConnectionType;
@@ -40,17 +43,22 @@ describe('proxmoxConnectionType', () => {
       secret: '00000000-0000-4000-8000-000000000001',
     });
     expect(
-      token.configSchema.safeParse({ tokenId: 'root@pam', secret: 'x' }).success,
+      token.configSchema.safeParse({ tokenId: 'root@pam', secret: 'x' })
+        .success,
     ).toBe(false);
   });
 
   it('validates password auth', () => {
     const password = getProxmoxAuthMethod('password')!;
     expect(
-      password.configSchema.parse({ username: 'alice@pve', password: 'secret' }),
+      password.configSchema.parse({
+        username: 'alice@pve',
+        password: 'secret',
+      }),
     ).toEqual({ username: 'alice@pve', password: 'secret' });
     expect(
-      password.configSchema.safeParse({ username: 'alice', password: 'x' }).success,
+      password.configSchema.safeParse({ username: 'alice', password: 'x' })
+        .success,
     ).toBe(false);
   });
 

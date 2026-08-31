@@ -1,4 +1,7 @@
-import { coreServices, createBackendPlugin } from '@backstage/backend-plugin-api';
+import {
+  coreServices,
+  createBackendPlugin,
+} from '@backstage/backend-plugin-api';
 import { actionsRegistryServiceRef } from '@backstage/backend-plugin-api/alpha';
 import { registerProxmoxActions } from './actions';
 import { DefaultProxmoxConnectionsService } from './connections/ProxmoxConnectionsService';
@@ -29,7 +32,9 @@ export const proxmoxPlugin = createBackendPlugin({
           );
         } else {
           logger.info(
-            `Registering Proxmox actions for ${connections.length} connection(s): ${connections
+            `Registering Proxmox actions for ${
+              connections.length
+            } connection(s): ${connections
               .map(connection => connection.title)
               .join(', ')}`,
           );

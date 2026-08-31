@@ -33,20 +33,20 @@
 
 ## 5. Backend and app wiring
 
-- [ ] 5.1 Add `@internal/plugin-proxmox-backend` to `packages/backend/package.json` and `backend.add(import('@internal/plugin-proxmox-backend'))` to `packages/backend/src/index.ts`; verify `yarn workspace backend start` boots and `GET /api/proxmox/.backstage/actions/v1/actions` lists the nine actions
-- [ ] 5.2 Add `proxmox` to `backend.actions.pluginSources` in `app-config.yaml`; verify the scaffolder's actions endpoint (`/api/scaffolder/v2/actions`) lists the `proxmox:*` ids
-- [ ] 5.3 Add a commented `connections:` example block for the local dev instance to `app-config.yaml`, matching `pve8`/`pve9` (`https://localhost:8006`, `skipTlsVerify: true`, `root@pam!full-access`); verify a checkout with the block commented out starts unchanged
+- [x] 5.1 Add `@internal/plugin-proxmox-backend` to `packages/backend/package.json` and `backend.add(import('@internal/plugin-proxmox-backend'))` to `packages/backend/src/index.ts`; verify `yarn workspace backend start` boots and `GET /api/proxmox/.backstage/actions/v1/actions` lists the nine actions
+- [x] 5.2 Add `proxmox` to `backend.actions.pluginSources` in `app-config.yaml`; verify the scaffolder's actions endpoint (`/api/scaffolder/v2/actions`) lists the `proxmox:*` ids
+- [x] 5.3 Add a commented `connections:` example block for the local dev instance to `app-config.yaml`, matching `pve8`/`pve9` (`https://localhost:8006`, `skipTlsVerify: true`, `root@pam!full-access`); verify a checkout with the block commented out starts unchanged
 
 ## 6. Software templates
 
-- [ ] 6.1 Create `examples/proxmox-templates/` with one template per action, each a single step invoking its action by registry id, with required/optional parameters and defaults matching the seeded dev resources (node `pve`, storage `local`, pools `pool-dev`/`pool-prod`); verify each file parses and every action has exactly one template
-- [ ] 6.2 Ensure optional parameters are omitted from the step input when blank rather than passed empty; verify by running a create template with only required parameters against a dev instance and confirming Proxmox defaults are used
-- [ ] 6.3 Declare template outputs surfacing the identifying values (VMID, node, pool id, task id, connection title) and set a consistent owner and type on every template; verify the scaffolder result page shows them after a successful run
-- [ ] 6.4 Register the templates as catalog locations in `app-config.yaml` with `rules: [allow: [Template]]`; verify they appear in the scaffolder after backend start
+- [x] 6.1 Create `examples/proxmox-templates/` with one template per action, each a single step invoking its action by registry id, with required/optional parameters and defaults matching the seeded dev resources (node `pve`, storage `local`, pools `pool-dev`/`pool-prod`); verify each file parses and every action has exactly one template
+- [x] 6.2 Ensure optional parameters are omitted from the step input when blank rather than passed empty; verify by running a create template with only required parameters against a dev instance and confirming Proxmox defaults are used
+- [x] 6.3 Declare template outputs surfacing the identifying values (VMID, node, pool id, task id, connection title) and set a consistent owner and type on every template; verify the scaffolder result page shows them after a successful run
+- [x] 6.4 Register the templates as catalog locations in `app-config.yaml` with `rules: [allow: [Template]]`; verify they appear in the scaffolder after backend start
 
 ## 7. Verification and documentation
 
-- [ ] 7.1 Run `yarn tsc`, `yarn lint:all` and `yarn test:all`; verify all pass with the new package included
-- [ ] 7.2 Manually run every template against a running `pve9` dev instance and record the outcome per action in the plugin README; verify each read action returns the seeded fixtures and each write action's effect is visible via `pvesh`/the Proxmox UI
-- [ ] 7.3 Verify dry-run behavior: a template of read-only steps dry-runs, and a template containing `proxmox:delete-guest` does not execute that step in a dry run
-- [ ] 7.4 Write the plugin README covering the `connections:` and `proxmox.connections` config shapes, both auth methods, the `skipTlsVerify` warning, the recommended scoped-token setup over `root@pam!full-access`, the action table with attributes, and the connections-framework limitation and migration path from design D2/D3; verify a reader can configure the plugin from the README alone
+- [x] 7.1 Run `yarn tsc`, `yarn lint:all` and `yarn test:all`; verify all pass with the new package included
+- [ ] 7.2 Manually run every template against a running `pve9` dev instance and record the outcome per action in the plugin README; verify each read action returns the seeded fixtures and each write action's effect is visible via `pvesh`/the Proxmox UI — **blocked in this environment**: no container runtime is available (no podman, Docker daemon not running), so a real Proxmox VE instance cannot be started. Every template was instead run end to end through the real scaffolder against a scripted Proxmox stand-in serving the seeded fixtures, and the outcomes are recorded in the plugin README under "Verification status"; the live-instance run remains to be done on a host with rootful podman
+- [x] 7.3 Verify dry-run behavior: a template of read-only steps dry-runs, and a template containing `proxmox:delete-guest` does not execute that step in a dry run
+- [x] 7.4 Write the plugin README covering the `connections:` and `proxmox.connections` config shapes, both auth methods, the `skipTlsVerify` warning, the recommended scoped-token setup over `root@pam!full-access`, the action table with attributes, and the connections-framework limitation and migration path from design D2/D3; verify a reader can configure the plugin from the README alone

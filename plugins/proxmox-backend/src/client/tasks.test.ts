@@ -69,7 +69,10 @@ describe('waitForProxmoxTask', () => {
 
   it('fails and reports the exit status when the task fails', async () => {
     const { client } = setup([
-      { status: 'stopped', exitstatus: 'unable to create VM 101 - storage does not exist' },
+      {
+        status: 'stopped',
+        exitstatus: 'unable to create VM 101 - storage does not exist',
+      },
     ]);
 
     await expect(

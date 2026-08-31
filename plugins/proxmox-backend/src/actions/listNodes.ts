@@ -35,7 +35,10 @@ export function registerListNodes(
             z.object({
               node: z.string().describe('Name of the node'),
               status: z.string().describe('Node status, for example "online"'),
-              cpu: z.number().optional().describe('Current CPU usage as a fraction'),
+              cpu: z
+                .number()
+                .optional()
+                .describe('Current CPU usage as a fraction'),
               maxcpu: z.number().optional().describe('Number of CPUs'),
               mem: z.number().optional().describe('Used memory in bytes'),
               maxmem: z.number().optional().describe('Total memory in bytes'),

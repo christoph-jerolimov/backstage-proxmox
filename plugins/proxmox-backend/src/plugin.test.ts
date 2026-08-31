@@ -5,7 +5,10 @@ describe('proxmoxPlugin', () => {
   it('starts without a Proxmox connection configured', async () => {
     await expect(
       startTestBackend({
-        features: [proxmoxPlugin, mockServices.rootConfig.factory({ data: {} })],
+        features: [
+          proxmoxPlugin,
+          mockServices.rootConfig.factory({ data: {} }),
+        ],
       }),
     ).resolves.toBeDefined();
   });
@@ -46,7 +49,9 @@ describe('proxmoxPlugin', () => {
           proxmoxPlugin,
           mockServices.rootConfig.factory({
             data: {
-              connections: [{ type: 'proxmox', baseUrl: 'not-a-url', auth: [] }],
+              connections: [
+                { type: 'proxmox', baseUrl: 'not-a-url', auth: [] },
+              ],
             },
           }),
         ],

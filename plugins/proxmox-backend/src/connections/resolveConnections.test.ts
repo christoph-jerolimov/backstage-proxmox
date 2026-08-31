@@ -57,10 +57,16 @@ describe('resolveProxmoxConnections', () => {
   it('unions both sources', () => {
     const connections = resolve({
       connections: [
-        { type: 'proxmox', baseUrl: 'https://one.example.com:8006', auth: tokenAuth },
+        {
+          type: 'proxmox',
+          baseUrl: 'https://one.example.com:8006',
+          auth: tokenAuth,
+        },
       ],
       proxmox: {
-        connections: [{ baseUrl: 'https://two.example.com:8006', auth: tokenAuth }],
+        connections: [
+          { baseUrl: 'https://two.example.com:8006', auth: tokenAuth },
+        ],
       },
     });
 
@@ -73,7 +79,11 @@ describe('resolveProxmoxConnections', () => {
   it('ignores connections of other types rather than rejecting them', () => {
     const connections = resolve({
       connections: [
-        { type: 'github', host: 'github.com', auth: [{ method: 'token', token: 'x' }] },
+        {
+          type: 'github',
+          host: 'github.com',
+          auth: [{ method: 'token', token: 'x' }],
+        },
         { type: 'aws', auth: [{ method: 'account', mainAccount: true }] },
         { type: 'proxmox', baseUrl: 'https://localhost:8006', auth: tokenAuth },
       ],
@@ -136,9 +146,9 @@ describe('resolveProxmoxConnections', () => {
     ['a missing auth array', { baseUrl: 'https://localhost:8006' }],
     ['an empty auth array', { baseUrl: 'https://localhost:8006', auth: [] }],
   ])('rejects %s', (_name, entry) => {
-    expect(() => resolve({ connections: [{ type: 'proxmox', ...entry }] })).toThrow(
-      /at least one auth method/,
-    );
+    expect(() =>
+      resolve({ connections: [{ type: 'proxmox', ...entry }] }),
+    ).toThrow(/at least one auth method/);
   });
 
   it('rejects an unknown auth method and names it', () => {
@@ -159,7 +169,12 @@ describe('resolveProxmoxConnections', () => {
     expect(() =>
       resolve({
         connections: [
-          { type: 'proxmox', title: 'Broken', baseUrl: 'nope', auth: tokenAuth },
+          {
+            type: 'proxmox',
+            title: 'Broken',
+            baseUrl: 'nope',
+            auth: tokenAuth,
+          },
         ],
       }),
     ).toThrow(/Invalid Proxmox connection "Broken".*baseUrl/s);
@@ -183,7 +198,11 @@ describe('resolveProxmoxConnections', () => {
     expect(() =>
       resolve({
         connections: [
-          { type: 'proxmox', baseUrl: 'https://localhost:8006', auth: tokenAuth },
+          {
+            type: 'proxmox',
+            baseUrl: 'https://localhost:8006',
+            auth: tokenAuth,
+          },
         ],
         proxmox: {
           connections: [
@@ -198,7 +217,11 @@ describe('resolveProxmoxConnections', () => {
     expect(
       resolve({
         connections: [
-          { type: 'proxmox', baseUrl: 'https://one.example.com:8006', auth: tokenAuth },
+          {
+            type: 'proxmox',
+            baseUrl: 'https://one.example.com:8006',
+            auth: tokenAuth,
+          },
         ],
       })[0].title,
     ).toBe('Proxmox VE');
@@ -206,8 +229,16 @@ describe('resolveProxmoxConnections', () => {
     expect(
       resolve({
         connections: [
-          { type: 'proxmox', baseUrl: 'https://one.example.com:8006', auth: tokenAuth },
-          { type: 'proxmox', baseUrl: 'https://two.example.com:8006', auth: tokenAuth },
+          {
+            type: 'proxmox',
+            baseUrl: 'https://one.example.com:8006',
+            auth: tokenAuth,
+          },
+          {
+            type: 'proxmox',
+            baseUrl: 'https://two.example.com:8006',
+            auth: tokenAuth,
+          },
         ],
       }).map(c => c.title),
     ).toEqual([

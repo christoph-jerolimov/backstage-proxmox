@@ -4,7 +4,10 @@ import {
   ProxmoxAuthValue,
   ProxmoxConnection,
 } from './proxmoxConnectionType';
-import { connectionHost, ResolvedProxmoxConnection } from './resolveConnections';
+import {
+  connectionHost,
+  ResolvedProxmoxConnection,
+} from './resolveConnections';
 
 /**
  * How a connection is selected. Mirrors the `query` of an upstream connection
@@ -49,7 +52,9 @@ function hostOf(value: string): string | undefined {
   }
 }
 
-export class DefaultProxmoxConnectionsService implements ProxmoxConnectionsService {
+export class DefaultProxmoxConnectionsService
+  implements ProxmoxConnectionsService
+{
   private constructor(
     private readonly connections: ResolvedProxmoxConnection[],
   ) {}
@@ -122,7 +127,9 @@ export class DefaultProxmoxConnectionsService implements ProxmoxConnectionsServi
       }
     }
     throw new NotAllowedError(
-      `Proxmox connection "${connection.title}" configures no acceptable auth method; wanted one of ${authMethods.join(
+      `Proxmox connection "${
+        connection.title
+      }" configures no acceptable auth method; wanted one of ${authMethods.join(
         ', ',
       )} but it configures ${connection.auth.map(a => a.method).join(', ')}`,
     );

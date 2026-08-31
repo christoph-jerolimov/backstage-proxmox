@@ -69,4 +69,11 @@ backend.add(import('@backstage/plugin-signals-backend'));
 // mcp actions plugin
 backend.add(import('@backstage/plugin-mcp-actions-backend'));
 
+// proxmox plugin
+// Registers the Proxmox actions in the actions registry, which makes them
+// available as scaffolder software template actions. Add "proxmox" to
+// backend.actions.pluginSources in app-config.yaml for the scaffolder to pick
+// them up, and configure at least one Proxmox connection.
+backend.add(import('@internal/plugin-proxmox-backend'));
+
 backend.start();

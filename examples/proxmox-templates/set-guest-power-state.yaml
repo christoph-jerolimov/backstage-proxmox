@@ -1,0 +1,72 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-set-guest-power-state
+  title: Proxmox — Set Guest Power State
+  description: |
+    Starts, stops, shuts down, reboots, suspends or resumes a Proxmox VM or
+    LXC container. Invokes the `proxmox:set-guest-power-state` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Guest
+      required:
+        - node
+        - vmid
+        - guestType
+        - state
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        node:
+          title: Node
+          type: string
+          default: pve
+        vmid:
+          title: VMID
+          type: number
+          default: 101
+        guestType:
+          title: Guest type
+          type: string
+          enum:
+            - qemu
+            - lxc
+          default: qemu
+        state:
+          title: Power state
+          type: string
+          enum:
+            - start
+            - stop
+            - shutdown
+            - reboot
+            - suspend
+            - resume
+          default: start
+
+  steps:
+    - id: action
+      name: Set power state
+      action: proxmox:set-guest-power-state
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        vmid: ${{ parameters.vmid }}
+        guestType: ${{ parameters.guestType }}
+        state: ${{ parameters.state }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Guest status
+        content: "VMID ${{ steps['action'].output.vmid }} is ${{ steps['action'].output.status }} (changed: ${{ steps['action'].output.changed }})"
+      - title: Proxmox task
+        content: ${{ steps['action'].output.taskId }}

@@ -99,7 +99,10 @@ describe('ProxmoxClient', () => {
       .on('POST', '/access/ticket', () => {
         issued += 1;
         return {
-          data: { ticket: `ticket-${issued}`, CSRFPreventionToken: `csrf-${issued}` },
+          data: {
+            ticket: `ticket-${issued}`,
+            CSRFPreventionToken: `csrf-${issued}`,
+          },
         };
       })
       .on('GET', '/nodes', { data: [] });
@@ -144,13 +147,17 @@ describe('ProxmoxClient', () => {
   });
 
   it('passes GET parameters as a query string', async () => {
-    const proxmox = FakeProxmox.create().on('GET', '/cluster/nextid', { data: '101' });
+    const proxmox = FakeProxmox.create().on('GET', '/cluster/nextid', {
+      data: '101',
+    });
 
-    await clientFor(tokenConnection, proxmox).get('/cluster/nextid', { vmid: 101 });
+    await clientFor(tokenConnection, proxmox).get('/cluster/nextid', {
+      vmid: 101,
+    });
 
-    expect(proxmox.requestsFor('GET', '/cluster/nextid')[0].query.get('vmid')).toBe(
-      '101',
-    );
+    expect(
+      proxmox.requestsFor('GET', '/cluster/nextid')[0].query.get('vmid'),
+    ).toBe('101');
   });
 
   it('does not build a TLS dispatcher when verification is left on', async () => {
@@ -174,16 +181,27 @@ describe('ProxmoxClient', () => {
     await client.get('/nodes');
 
     expect(proxmox.requestsFor('GET', '/nodes')[0].dispatcher).toBeDefined();
-    const warnings = messages().filter(m => m.includes('TLS certificate verification'));
+    const warnings = messages().filter(m =>
+      m.includes('TLS certificate verification'),
+    );
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('"Dev Proxmox"');
   });
 
   describe('error mapping', () => {
     it.each([
-      [401, /rejected the credentials for connection "Dev Proxmox" \(HTTP 401\)/],
-      [403, /not permitted to perform GET \/nodes on Proxmox connection "Dev Proxmox"/],
-      [404, /has no resource for GET \/nodes on Proxmox connection "Dev Proxmox"/],
+      [
+        401,
+        /rejected the credentials for connection "Dev Proxmox" \(HTTP 401\)/,
+      ],
+      [
+        403,
+        /not permitted to perform GET \/nodes on Proxmox connection "Dev Proxmox"/,
+      ],
+      [
+        404,
+        /has no resource for GET \/nodes on Proxmox connection "Dev Proxmox"/,
+      ],
       [500, /Proxmox request failed .* \(HTTP 500\)/],
     ])('maps HTTP %s', async (status, expected) => {
       const proxmox = FakeProxmox.create().on('GET', '/nodes', {
@@ -191,16 +209,20 @@ describe('ProxmoxClient', () => {
         errors: { detail: 'Permission check failed' },
       });
 
-      await expect(clientFor(tokenConnection, proxmox).get('/nodes')).rejects.toThrow(
-        expected,
-      );
+      await expect(
+        clientFor(tokenConnection, proxmox).get('/nodes'),
+      ).rejects.toThrow(expected);
     });
 
     it('preserves the Proxmox message', async () => {
-      const proxmox = FakeProxmox.create().on('GET', '/nodes/pve/qemu/999/config', {
-        status: 404,
-        errors: { vmid: 'VM 999 does not exist' },
-      });
+      const proxmox = FakeProxmox.create().on(
+        'GET',
+        '/nodes/pve/qemu/999/config',
+        {
+          status: 404,
+          errors: { vmid: 'VM 999 does not exist' },
+        },
+      );
 
       await expect(
         clientFor(tokenConnection, proxmox).get('/nodes/pve/qemu/999/config'),
@@ -214,9 +236,14 @@ describe('ProxmoxClient', () => {
       });
       const { logger, messages } = recordingLogger();
 
-      const error = await clientFor(tokenConnection, proxmox, logger)
+      const error: Error = await clientFor(tokenConnection, proxmox, logger)
         .get('/nodes')
-        .catch(e => e as Error);
+        .then(
+          () => {
+            throw new Error('expected the request to fail');
+          },
+          (e: Error) => e,
+        );
 
       expect(error.message).not.toContain('super-secret-token');
       expect(error.message).toContain('[REDACTED]');
@@ -233,9 +260,14 @@ describe('ProxmoxClient', () => {
           raw: 'bad password super-secret-password',
         });
 
-      const error = await clientFor(passwordConnection, proxmox)
+      const error: Error = await clientFor(passwordConnection, proxmox)
         .get('/nodes')
-        .catch(e => e as Error);
+        .then(
+          () => {
+            throw new Error('expected the request to fail');
+          },
+          (e: Error) => e,
+        );
 
       expect(error.message).not.toContain('super-secret-password');
     });

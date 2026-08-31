@@ -11,7 +11,14 @@ import {
   taskOutputFields,
 } from './helpers';
 
-const POWER_STATES = ['start', 'stop', 'shutdown', 'reboot', 'suspend', 'resume'] as const;
+const POWER_STATES = [
+  'start',
+  'stop',
+  'shutdown',
+  'reboot',
+  'suspend',
+  'resume',
+] as const;
 
 type PowerState = (typeof POWER_STATES)[number];
 
@@ -51,10 +58,14 @@ export function registerSetGuestPowerState(
           node: z.string(),
           vmid: z.number(),
           guestType: z.string(),
-          status: z.string().describe('Status of the guest after the operation'),
+          status: z
+            .string()
+            .describe('Status of the guest after the operation'),
           changed: z
             .boolean()
-            .describe('False when the guest was already in the requested state'),
+            .describe(
+              'False when the guest was already in the requested state',
+            ),
           ...taskOutputFields(z),
         }),
     },
@@ -62,7 +73,9 @@ export function registerSetGuestPowerState(
       const client = await clientFor(deps, input.connection);
       const base = guestPath(input.node, input.guestType, input.vmid);
 
-      const current = await client.get<{ status?: string }>(`${base}/status/current`);
+      const current = await client.get<{ status?: string }>(
+        `${base}/status/current`,
+      );
       const target = TARGET_STATUS[input.state as PowerState];
 
       if (target && current?.status === target) {
@@ -97,7 +110,9 @@ export function registerSetGuestPowerState(
         sleep: deps.sleep,
       });
 
-      const after = await client.get<{ status?: string }>(`${base}/status/current`);
+      const after = await client.get<{ status?: string }>(
+        `${base}/status/current`,
+      );
 
       return {
         output: {

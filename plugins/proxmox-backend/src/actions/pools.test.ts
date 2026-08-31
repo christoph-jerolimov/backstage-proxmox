@@ -38,7 +38,9 @@ describe('proxmox:create-pool', () => {
 });
 
 describe('proxmox:update-pool', () => {
-  function fake(members: Array<{ vmid?: number; storage?: string; type?: string }>) {
+  function fake(
+    members: Array<{ vmid?: number; storage?: string; type?: string }>,
+  ) {
     let current = members;
     return FakeProxmox.create()
       .on('GET', '/pools/pool-dev', () => ({
@@ -49,12 +51,17 @@ describe('proxmox:update-pool', () => {
         if (vms) {
           current = [
             ...current,
-            ...vms.split(',').map(vmid => ({ vmid: Number(vmid), type: 'qemu' })),
+            ...vms
+              .split(',')
+              .map(vmid => ({ vmid: Number(vmid), type: 'qemu' })),
           ];
         }
         const storage = request.body.get('storage');
         if (storage) {
-          current = [...current, ...storage.split(',').map(name => ({ storage: name }))];
+          current = [
+            ...current,
+            ...storage.split(',').map(name => ({ storage: name })),
+          ];
         }
         return { data: null };
       });
@@ -69,9 +76,9 @@ describe('proxmox:update-pool', () => {
       comment: 'Updated via Backstage',
     });
 
-    expect(proxmox.requestsFor('PUT', '/pools/pool-dev')[0].body.get('comment')).toBe(
-      'Updated via Backstage',
-    );
+    expect(
+      proxmox.requestsFor('PUT', '/pools/pool-dev')[0].body.get('comment'),
+    ).toBe('Updated via Backstage');
     expect(output).toMatchObject({
       poolid: 'pool-dev',
       members: [{ vmid: 101, type: 'qemu' }],
@@ -87,9 +94,9 @@ describe('proxmox:update-pool', () => {
       vms: [101, 102],
     });
 
-    expect(proxmox.requestsFor('PUT', '/pools/pool-dev')[0].body.get('vms')).toBe(
-      '101,102',
-    );
+    expect(
+      proxmox.requestsFor('PUT', '/pools/pool-dev')[0].body.get('vms'),
+    ).toBe('101,102');
     expect((output as any).members).toEqual([
       { vmid: 101, type: 'qemu' },
       { vmid: 102, type: 'qemu' },
@@ -102,9 +109,9 @@ describe('proxmox:update-pool', () => {
 
     await invoke('update-pool', { poolid: 'pool-dev', storages: ['local'] });
 
-    expect(proxmox.requestsFor('PUT', '/pools/pool-dev')[0].body.get('storage')).toBe(
-      'local',
-    );
+    expect(
+      proxmox.requestsFor('PUT', '/pools/pool-dev')[0].body.get('storage'),
+    ).toBe('local');
   });
 
   it('adding the same member twice leaves it in the pool once', async () => {
@@ -112,7 +119,10 @@ describe('proxmox:update-pool', () => {
     const { invoke } = setupActions({ proxmox });
 
     await invoke('update-pool', { poolid: 'pool-dev', vms: [101] });
-    const { output } = await invoke('update-pool', { poolid: 'pool-dev', vms: [101] });
+    const { output } = await invoke('update-pool', {
+      poolid: 'pool-dev',
+      vms: [101],
+    });
 
     expect((output as any).members).toEqual([{ vmid: 101, type: 'qemu' }]);
     // The second call has nothing left to add, so it does not write again.
@@ -125,7 +135,9 @@ describe('proxmox:update-pool', () => {
 
     await invoke('update-pool', { poolid: 'pool-dev', vms: [101, 102] });
 
-    expect(proxmox.requestsFor('PUT', '/pools/pool-dev')[0].body.get('vms')).toBe('102');
+    expect(
+      proxmox.requestsFor('PUT', '/pools/pool-dev')[0].body.get('vms'),
+    ).toBe('102');
   });
 
   it('fails when there is nothing to update', async () => {

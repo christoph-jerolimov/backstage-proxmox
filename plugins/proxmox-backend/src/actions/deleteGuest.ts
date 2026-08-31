@@ -31,12 +31,16 @@ export function registerDeleteGuest(
             .boolean()
             .optional()
             .default(false)
-            .describe('Stop the guest first when it is running, instead of failing'),
+            .describe(
+              'Stop the guest first when it is running, instead of failing',
+            ),
           purge: z
             .boolean()
             .optional()
             .default(false)
-            .describe('Also remove the guest from backup jobs and HA resource configuration'),
+            .describe(
+              'Also remove the guest from backup jobs and HA resource configuration',
+            ),
           ...taskFields(z),
         }),
       output: z =>
@@ -52,7 +56,9 @@ export function registerDeleteGuest(
       const client = await clientFor(deps, input.connection);
       const base = guestPath(input.node, input.guestType, input.vmid);
 
-      const current = await client.get<{ status?: string }>(`${base}/status/current`);
+      const current = await client.get<{ status?: string }>(
+        `${base}/status/current`,
+      );
       if (current?.status === 'running') {
         if (!input.stopIfRunning) {
           throw new ConflictError(

@@ -25,7 +25,10 @@ export function registerCreateLxc(
       input: z =>
         z.object({
           ...connectionField(z),
-          node: z.string().min(1).describe('Name of the Proxmox node, for example "pve"'),
+          node: z
+            .string()
+            .min(1)
+            .describe('Name of the Proxmox node, for example "pve"'),
           hostname: z.string().min(1).describe('Hostname of the new container'),
           ostemplate: z
             .string()
@@ -38,7 +41,9 @@ export function registerCreateLxc(
             .int()
             .min(100)
             .optional()
-            .describe('VMID to use. Left out, the next free VMID is allocated.'),
+            .describe(
+              'VMID to use. Left out, the next free VMID is allocated.',
+            ),
           cores: z.number().int().min(1).optional().describe('CPU cores'),
           memory: z.number().int().min(16).optional().describe('Memory in MiB'),
           swap: z.number().int().min(0).optional().describe('Swap in MiB'),
@@ -59,12 +64,18 @@ export function registerCreateLxc(
               'First network device, for example "name=eth0,bridge=vmbr0,ip=dhcp"',
             ),
           tags: z.string().optional().describe('Semicolon separated tags'),
-          pool: z.string().optional().describe('Resource pool to add the container to'),
+          pool: z
+            .string()
+            .optional()
+            .describe('Resource pool to add the container to'),
           unprivileged: z
             .boolean()
             .optional()
             .describe('Create an unprivileged container'),
-          description: z.string().optional().describe('Description shown in Proxmox'),
+          description: z
+            .string()
+            .optional()
+            .describe('Description shown in Proxmox'),
           ...taskFields(z),
         }),
       output: z =>
