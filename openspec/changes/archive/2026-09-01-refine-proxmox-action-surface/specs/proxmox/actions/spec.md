@@ -1,5 +1,19 @@
 ## MODIFIED Requirements
 
+### Requirement: Safety attributes reflect what each action does
+
+Read-only actions SHALL declare `readOnly: true` and `destructive: false`. Actions that create or modify resources SHALL declare `readOnly: false`. Actions that can remove or interrupt a running resource SHALL declare `destructive: true`. Actions whose repeated invocation with the same input converges on the same state SHALL declare `idempotent: true`.
+
+#### Scenario: Read-only action in a dry run
+
+- **WHEN** a software template containing only read-only, non-destructive Proxmox steps is dry-run
+- **THEN** the dry run executes those steps
+
+#### Scenario: Destructive action in a dry run
+
+- **WHEN** a software template containing `proxmox:delete-vm` is dry-run
+- **THEN** that step is not executed against Proxmox
+
 ### Requirement: Long-running Proxmox operations are awaited
 
 Proxmox returns a task identifier (UPID) for operations it runs asynchronously. Actions that trigger such an operation SHALL poll the task status until it finishes or a timeout elapses, SHALL succeed only when the task's exit status is `OK`, and SHALL include the task identifier in their output. Actions SHALL accept an optional timeout and an optional flag to return as soon as the task is accepted instead of waiting. A task identifier returned by an action that did not wait SHALL remain awaitable afterwards, so several operations can be started concurrently and awaited together.
