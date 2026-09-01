@@ -214,6 +214,47 @@ describe('ProxmoxClient', () => {
       ).rejects.toThrow(expected);
     });
 
+    it('maps a missing configuration file to not found', async () => {
+      const proxmox = FakeProxmox.create().on('GET', '/nodes/pve/qemu/201/config', {
+        status: 500,
+        errors: {
+          detail:
+            "Configuration file 'nodes/pve/qemu-server/201.conf' does not exist",
+        },
+      });
+
+      const error: Error = await clientFor(tokenConnection, proxmox)
+        .get('/nodes/pve/qemu/201/config')
+        .then(
+          () => {
+            throw new Error('expected the request to fail');
+          },
+          (e: Error) => e,
+        );
+
+      expect(error.name).toBe('NotFoundError');
+      expect(error.message).toContain('does not exist');
+    });
+
+    it('leaves other server errors as generic failures', async () => {
+      const proxmox = FakeProxmox.create().on('GET', '/nodes', {
+        status: 500,
+        errors: { detail: 'internal error' },
+      });
+
+      const error: Error = await clientFor(tokenConnection, proxmox)
+        .get('/nodes')
+        .then(
+          () => {
+            throw new Error('expected the request to fail');
+          },
+          (e: Error) => e,
+        );
+
+      expect(error.name).not.toBe('NotFoundError');
+      expect(error.message).toMatch(/HTTP 500/);
+    });
+
     it('preserves the Proxmox message', async () => {
       const proxmox = FakeProxmox.create().on(
         'GET',

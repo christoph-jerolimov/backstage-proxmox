@@ -8,7 +8,7 @@ import {
   ProxmoxActionDeps,
   requireAtLeastOneField,
 } from './helpers';
-import { addPoolMembers } from './poolMembers';
+import { addPoolMembers, readPool } from './poolMembers';
 
 export function registerCreatePool(
   actionsRegistry: ActionsRegistryService,
@@ -146,6 +146,94 @@ export function registerUpdatePool(
             storage: member.storage,
             type: member.type,
           })),
+        },
+      };
+    },
+  });
+}
+
+export function registerDeletePool(
+  actionsRegistry: ActionsRegistryService,
+  deps: ProxmoxActionDeps,
+) {
+  actionsRegistry.register({
+    name: 'delete-pool',
+    title: 'Delete Proxmox Resource Pool',
+    description:
+      'Removes a Proxmox resource pool. The pool must be empty, unless removeMembers is set. The member VMs, containers and storages themselves are never deleted.',
+    attributes: { readOnly: false, idempotent: false, destructive: true },
+    schema: {
+      input: z =>
+        z.object({
+          ...connectionField(z),
+          poolid: z.string().min(1).describe('Id of the pool to remove'),
+          removeMembers: z
+            .boolean()
+            .optional()
+            .default(false)
+            .describe(
+              'Detach the pool members first instead of failing. The guests and storages themselves are not deleted.',
+            ),
+        }),
+      output: z =>
+        z.object({
+          ...connectionOutputField(z),
+          poolid: z.string(),
+          removedMembers: z
+            .array(z.string())
+            .describe('Members that were detached from the pool before it was removed'),
+        }),
+    },
+    action: async ({ input, logger }) => {
+      const client = await clientFor(deps, input.connection);
+
+      // Proxmox refuses to delete a pool that still has members, so the
+      // members are read first to fail with a message that names them.
+      const pool = await readPool(client, input.poolid);
+      const members = pool.members ?? [];
+      const memberLabels = members.map(member =>
+        typeof member.vmid === 'number'
+          ? `guest ${member.vmid}`
+          : `storage ${member.storage}`,
+      );
+
+      if (memberLabels.length > 0 && !input.removeMembers) {
+        throw new ConflictError(
+          `Proxmox resource pool "${input.poolid}" still has ${
+            memberLabels.length
+          } member(s): ${memberLabels.join(
+            ', ',
+          )}. Set removeMembers to detach them, which does not delete them.`,
+        );
+      }
+
+      if (memberLabels.length > 0) {
+        logger.info(
+          `Detaching ${memberLabels.length} member(s) from Proxmox resource pool "${input.poolid}"`,
+        );
+        const vms = members
+          .filter(member => typeof member.vmid === 'number')
+          .map(member => member.vmid)
+          .join(',');
+        const storage = members
+          .filter(member => typeof member.storage === 'string')
+          .map(member => member.storage)
+          .join(',');
+        await client.put(`/pools/${encodeURIComponent(input.poolid)}`, {
+          ...(vms ? { vms } : {}),
+          ...(storage ? { storage } : {}),
+          delete: true,
+        });
+      }
+
+      logger.info(`Deleting Proxmox resource pool "${input.poolid}"`);
+      await client.delete(`/pools/${encodeURIComponent(input.poolid)}`);
+
+      return {
+        output: {
+          connectionTitle: client.connectionTitle,
+          poolid: input.poolid,
+          removedMembers: memberLabels,
         },
       };
     },

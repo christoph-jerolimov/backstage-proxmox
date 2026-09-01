@@ -88,8 +88,8 @@ export function taskFields(z: Zod) {
   };
 }
 
-/** The fields that identify a guest. */
-export function guestFields(z: Zod) {
+/** The fields that identify a VM. */
+export function vmFields(z: Zod) {
   return {
     node: z
       .string()
@@ -99,12 +99,22 @@ export function guestFields(z: Zod) {
       .number()
       .int()
       .min(100)
-      .describe('Numeric id of the VM or container'),
-    guestType: z
-      .enum(['qemu', 'lxc'])
-      .describe(
-        'Whether the guest is a QEMU VM ("qemu") or an LXC container ("lxc")',
-      ),
+      .describe('Numeric id of the virtual machine'),
+  };
+}
+
+/** The fields that identify an LXC container. */
+export function containerFields(z: Zod) {
+  return {
+    node: z
+      .string()
+      .min(1)
+      .describe('Name of the Proxmox node, for example "pve"'),
+    vmid: z
+      .number()
+      .int()
+      .min(100)
+      .describe('Numeric id of the container'),
   };
 }
 

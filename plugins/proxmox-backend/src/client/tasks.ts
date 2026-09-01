@@ -18,6 +18,19 @@ const INITIAL_POLL_INTERVAL_MS = 500;
 const MAX_POLL_INTERVAL_MS = 5000;
 const POLL_BACKOFF_FACTOR = 1.5;
 
+/**
+ * A Proxmox task id carries the node that runs it as its second field:
+ * `UPID:<node>:<pid>:<pstart>:<starttime>:<type>:<id>:<user>:`. Reading it
+ * from there is what lets callers await a task with nothing but the id an
+ * earlier action returned.
+ */
+const UPID_PATTERN = /^UPID:([^:\s]+):/;
+
+/** Returns the node a task id belongs to, or undefined when it is not a UPID. */
+export function nodeFromTaskId(taskId: string): string | undefined {
+  return UPID_PATTERN.exec(taskId)?.[1];
+}
+
 const defaultSleep = (ms: number) =>
   new Promise<void>(resolve => {
     setTimeout(resolve, ms);

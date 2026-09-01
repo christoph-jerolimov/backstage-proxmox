@@ -11,12 +11,12 @@ import {
   taskOutputFields,
 } from './helpers';
 
-export function registerCreateLxc(
+export function registerCreateContainer(
   actionsRegistry: ActionsRegistryService,
   deps: ProxmoxActionDeps,
 ) {
   actionsRegistry.register({
-    name: 'create-lxc',
+    name: 'create-container',
     title: 'Create Proxmox LXC Container',
     description:
       'Creates an LXC container on a Proxmox node from an OS template. When no VMID is given, the next free one is allocated.',

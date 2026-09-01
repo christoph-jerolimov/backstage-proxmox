@@ -3,101 +3,6 @@ import { completedTask, setupActions } from '../__testUtils__/actionHarness';
 
 const CREATE_TASK = 'UPID:pve:0001:qmcreate:101:root@pam:';
 
-describe('proxmox:list-nodes', () => {
-  it('returns one entry per node', async () => {
-    const proxmox = FakeProxmox.create().on('GET', '/nodes', {
-      data: [
-        {
-          node: 'pve',
-          status: 'online',
-          cpu: 0.02,
-          maxcpu: 8,
-          mem: 100,
-          maxmem: 200,
-        },
-        { node: 'pve2', status: 'offline' },
-      ],
-    });
-    const { invoke } = setupActions({ proxmox });
-
-    const { output } = await invoke('list-nodes');
-
-    expect(output).toEqual({
-      connectionTitle: 'Dev Proxmox',
-      nodes: [
-        {
-          node: 'pve',
-          status: 'online',
-          cpu: 0.02,
-          maxcpu: 8,
-          mem: 100,
-          maxmem: 200,
-        },
-        { node: 'pve2', status: 'offline' },
-      ],
-    });
-  });
-});
-
-describe('proxmox:get-guest', () => {
-  it('reads a QEMU VM', async () => {
-    const proxmox = FakeProxmox.create()
-      .on('GET', '/nodes/pve/qemu/101/status/current', {
-        data: { status: 'stopped', uptime: 0 },
-      })
-      .on('GET', '/nodes/pve/qemu/101/config', {
-        data: { name: 'web-01', cores: 2, memory: 2048 },
-      });
-    const { invoke } = setupActions({ proxmox });
-
-    const { output } = await invoke('get-guest', {
-      node: 'pve',
-      vmid: 101,
-      guestType: 'qemu',
-    });
-
-    expect(output).toMatchObject({
-      vmid: 101,
-      guestType: 'qemu',
-      name: 'web-01',
-      status: 'stopped',
-      config: { name: 'web-01', cores: 2, memory: 2048 },
-    });
-  });
-
-  it('reads an LXC container and uses its hostname as the name', async () => {
-    const proxmox = FakeProxmox.create()
-      .on('GET', '/nodes/pve/lxc/201/status/current', {
-        data: { status: 'stopped' },
-      })
-      .on('GET', '/nodes/pve/lxc/201/config', {
-        data: { hostname: 'cache-01', memory: 512 },
-      });
-    const { invoke } = setupActions({ proxmox });
-
-    const { output } = await invoke('get-guest', {
-      node: 'pve',
-      vmid: 201,
-      guestType: 'lxc',
-    });
-
-    expect(output).toMatchObject({ name: 'cache-01', guestType: 'lxc' });
-  });
-
-  it('reports an unknown guest as not found', async () => {
-    const proxmox = FakeProxmox.create().on(
-      'GET',
-      '/nodes/pve/qemu/999/status/current',
-      { status: 404, errors: { vmid: 'VM 999 does not exist' } },
-    );
-    const { invoke } = setupActions({ proxmox });
-
-    await expect(
-      invoke('get-guest', { node: 'pve', vmid: 999, guestType: 'qemu' }),
-    ).rejects.toThrow(/HTTP 404.*VM 999 does not exist/s);
-  });
-});
-
 describe('proxmox:create-vm', () => {
   function fakeWithCreate() {
     const proxmox = FakeProxmox.create().on('POST', '/nodes/pve/qemu', {
@@ -300,142 +205,7 @@ describe('proxmox:update-vm-config', () => {
   });
 });
 
-describe('proxmox:set-guest-power-state', () => {
-  const TASK = 'UPID:pve:0003:qmstart:101:root@pam:';
-
-  it('starts a stopped guest and reports it running', async () => {
-    let status = 'stopped';
-    const proxmox = FakeProxmox.create()
-      .on('GET', '/nodes/pve/qemu/101/status/current', () => ({
-        data: { status },
-      }))
-      .on('POST', '/nodes/pve/qemu/101/status/start', () => {
-        status = 'running';
-        return { data: TASK };
-      });
-    completedTask(proxmox, 'pve', TASK);
-    const { invoke } = setupActions({ proxmox });
-
-    const { output } = await invoke('set-guest-power-state', {
-      node: 'pve',
-      vmid: 101,
-      guestType: 'qemu',
-      state: 'start',
-    });
-
-    expect(output).toMatchObject({
-      status: 'running',
-      changed: true,
-      taskId: TASK,
-    });
-  });
-
-  it('succeeds without acting when the guest is already in the requested state', async () => {
-    const proxmox = FakeProxmox.create().on(
-      'GET',
-      '/nodes/pve/qemu/101/status/current',
-      { data: { status: 'running' } },
-    );
-    const { invoke } = setupActions({ proxmox });
-
-    const { output } = await invoke('set-guest-power-state', {
-      node: 'pve',
-      vmid: 101,
-      guestType: 'qemu',
-      state: 'start',
-    });
-
-    expect(output).toMatchObject({ status: 'running', changed: false });
-    expect(
-      proxmox.requestsFor('POST', '/nodes/pve/qemu/101/status/start'),
-    ).toHaveLength(0);
-  });
-
-  it('works for LXC containers too', async () => {
-    const proxmox = FakeProxmox.create().on(
-      'GET',
-      '/nodes/pve/lxc/201/status/current',
-      { data: { status: 'stopped' } },
-    );
-    const { invoke } = setupActions({ proxmox });
-
-    const { output } = await invoke('set-guest-power-state', {
-      node: 'pve',
-      vmid: 201,
-      guestType: 'lxc',
-      state: 'stop',
-    });
-
-    expect(output).toMatchObject({ status: 'stopped', changed: false });
-  });
-});
-
-describe('proxmox:delete-guest', () => {
-  const STOP_TASK = 'UPID:pve:0004:qmstop:101:root@pam:';
-  const DELETE_TASK = 'UPID:pve:0005:qmdestroy:101:root@pam:';
-
-  function fake(status: string) {
-    const proxmox = FakeProxmox.create()
-      .on('GET', '/nodes/pve/qemu/101/status/current', { data: { status } })
-      .on('POST', '/nodes/pve/qemu/101/status/stop', { data: STOP_TASK })
-      .on('DELETE', '/nodes/pve/qemu/101', { data: DELETE_TASK });
-    completedTask(proxmox, 'pve', STOP_TASK);
-    return completedTask(proxmox, 'pve', DELETE_TASK);
-  }
-
-  it('deletes a stopped guest', async () => {
-    const proxmox = fake('stopped');
-    const { invoke } = setupActions({ proxmox });
-
-    const { output } = await invoke('delete-guest', {
-      node: 'pve',
-      vmid: 101,
-      guestType: 'qemu',
-    });
-
-    expect(output).toMatchObject({
-      vmid: 101,
-      taskId: DELETE_TASK,
-      exitStatus: 'OK',
-    });
-    expect(
-      proxmox.requestsFor('POST', '/nodes/pve/qemu/101/status/stop'),
-    ).toHaveLength(0);
-  });
-
-  it('refuses to delete a running guest', async () => {
-    const proxmox = fake('running');
-    const { invoke } = setupActions({ proxmox });
-
-    await expect(
-      invoke('delete-guest', { node: 'pve', vmid: 101, guestType: 'qemu' }),
-    ).rejects.toThrow(/is running; set stopIfRunning/);
-    expect(proxmox.requestsFor('DELETE', '/nodes/pve/qemu/101')).toHaveLength(
-      0,
-    );
-  });
-
-  it('stops a running guest first when asked to', async () => {
-    const proxmox = fake('running');
-    const { invoke } = setupActions({ proxmox });
-
-    await invoke('delete-guest', {
-      node: 'pve',
-      vmid: 101,
-      guestType: 'qemu',
-      stopIfRunning: true,
-    });
-
-    expect(
-      proxmox.requestsFor('POST', '/nodes/pve/qemu/101/status/stop'),
-    ).toHaveLength(1);
-    expect(proxmox.requestsFor('DELETE', '/nodes/pve/qemu/101')).toHaveLength(
-      1,
-    );
-  });
-});
-
-describe('proxmox:create-lxc', () => {
+describe('proxmox:create-container', () => {
   const TASK = 'UPID:pve:0006:vzcreate:203:root@pam:';
 
   it('creates a container and allocates a VMID', async () => {
@@ -445,7 +215,7 @@ describe('proxmox:create-lxc', () => {
     completedTask(proxmox, 'pve', TASK);
     const { invoke } = setupActions({ proxmox });
 
-    const { output } = await invoke('create-lxc', {
+    const { output } = await invoke('create-container', {
       node: 'pve',
       hostname: 'cache-02',
       ostemplate: 'local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst',
@@ -477,7 +247,7 @@ describe('proxmox:create-lxc', () => {
     const { invoke } = setupActions({ proxmox });
 
     await expect(
-      invoke('create-lxc', {
+      invoke('create-container', {
         node: 'pve',
         hostname: 'cache-02',
         ostemplate: 'local:vztmpl/nope.tar.zst',

@@ -11,6 +11,13 @@ describe('Proxmox action registration', () => {
     );
   });
 
+  it('registers fourteen actions', async () => {
+    const { registry } = setupActions();
+    const { actions } = await registry.list();
+
+    expect(actions).toHaveLength(14);
+  });
+
   it('declares attributes that match what each action does', async () => {
     const { registry } = setupActions();
     const { actions } = await registry.list();
@@ -18,20 +25,47 @@ describe('Proxmox action registration', () => {
       actions.map(action => [action.name, action.attributes]),
     );
 
-    expect(attributes['list-nodes']).toEqual({
-      readOnly: true,
-      idempotent: true,
-      destructive: false,
-    });
-    expect(attributes['get-guest']).toEqual({
-      readOnly: true,
-      idempotent: true,
-      destructive: false,
-    });
-    expect(attributes['set-guest-power-state'].destructive).toBe(true);
-    expect(attributes['delete-guest'].destructive).toBe(true);
+    const readOnly = { readOnly: true, idempotent: true, destructive: false };
+    expect(attributes['list-nodes']).toEqual(readOnly);
+    expect(attributes['get-vm']).toEqual(readOnly);
+    expect(attributes['get-container']).toEqual(readOnly);
+    expect(attributes['wait-for-tasks']).toEqual(readOnly);
+
+    expect(attributes['set-vm-power-state'].destructive).toBe(true);
+    expect(attributes['set-container-power-state'].destructive).toBe(true);
+    expect(attributes['delete-vm'].destructive).toBe(true);
+    expect(attributes['delete-container'].destructive).toBe(true);
+    expect(attributes['delete-pool'].destructive).toBe(true);
+
     expect(attributes['update-vm-config'].idempotent).toBe(true);
     expect(attributes['update-pool'].idempotent).toBe(true);
+  });
+
+  it('no longer registers the actions that were split or renamed', async () => {
+    const { registry } = setupActions();
+    const { actions } = await registry.list();
+    const names = actions.map(action => action.name);
+
+    for (const removed of [
+      'get-guest',
+      'set-guest-power-state',
+      'delete-guest',
+      'create-lxc',
+    ]) {
+      expect(names).not.toContain(removed);
+    }
+  });
+
+  it('has no action that discriminates on a guest type', async () => {
+    const { registry } = setupActions();
+    const { actions } = await registry.list();
+
+    for (const action of actions) {
+      expect([
+        action.name,
+        (action.schema.input as { properties?: object }).properties ?? {},
+      ]).toEqual([action.name, expect.not.objectContaining({ guestType: {} })]);
+    }
   });
 
   it('marks only the read-only actions as dry-run safe', async () => {
@@ -47,7 +81,12 @@ describe('Proxmox action registration', () => {
       .map(action => action.name)
       .sort();
 
-    expect(dryRunnable).toEqual(['get-guest', 'list-nodes']);
+    expect(dryRunnable).toEqual([
+      'get-container',
+      'get-vm',
+      'list-nodes',
+      'wait-for-tasks',
+    ]);
   });
 
   it('declares no secrets schema, which templates cannot supply', async () => {
@@ -150,7 +189,7 @@ describe('Proxmox action registration', () => {
     const { invoke, proxmox } = setupActions();
 
     await expect(
-      invoke('get-guest', { node: 'pve', vmid: 101 }),
+      invoke('get-vm', { node: 'pve' }),
     ).rejects.toThrow(/Invalid input/);
     expect(proxmox.requests).toHaveLength(0);
   });

@@ -150,3 +150,102 @@ describe('proxmox:update-pool', () => {
     expect(proxmox.requests).toHaveLength(0);
   });
 });
+
+describe('proxmox:delete-pool', () => {
+  function poolFake(
+    members: Array<{ vmid?: number; storage?: string; type?: string }>,
+    exists = true,
+  ) {
+    const proxmox = FakeProxmox.create().on('DELETE', '/pools/pool-dev', {
+      data: null,
+    });
+    let current = members;
+    proxmox.on('GET', '/pools/pool-dev', () =>
+      exists
+        ? { data: { comment: 'Development workloads', members: current } }
+        : { status: 404, errors: { poolid: "pool 'pool-dev' does not exist" } },
+    );
+    proxmox.on('PUT', '/pools/pool-dev', request => {
+      if (request.body.get('delete')) {
+        current = [];
+      }
+      return { data: null };
+    });
+    return proxmox;
+  }
+
+  it('deletes an empty pool', async () => {
+    const proxmox = poolFake([]);
+    const { invoke } = setupActions({ proxmox });
+
+    const { output } = await invoke('delete-pool', { poolid: 'pool-dev' });
+
+    expect(output).toEqual({
+      connectionTitle: 'Dev Proxmox',
+      poolid: 'pool-dev',
+      removedMembers: [],
+    });
+    expect(proxmox.requestsFor('DELETE', '/pools/pool-dev')).toHaveLength(1);
+    expect(proxmox.requestsFor('PUT', '/pools/pool-dev')).toHaveLength(0);
+  });
+
+  it('refuses a pool that still has members and names them', async () => {
+    const proxmox = poolFake([
+      { vmid: 101, type: 'qemu' },
+      { storage: 'local', type: 'storage' },
+    ]);
+    const { invoke } = setupActions({ proxmox });
+
+    await expect(invoke('delete-pool', { poolid: 'pool-dev' })).rejects.toThrow(
+      /still has 2 member\(s\): guest 101, storage local/,
+    );
+    expect(proxmox.requestsFor('DELETE', '/pools/pool-dev')).toHaveLength(0);
+  });
+
+  it('detaches members first when asked to, without deleting them', async () => {
+    const proxmox = poolFake([
+      { vmid: 101, type: 'qemu' },
+      { vmid: 102, type: 'qemu' },
+      { storage: 'local', type: 'storage' },
+    ]);
+    const { invoke } = setupActions({ proxmox });
+
+    const { output } = await invoke('delete-pool', {
+      poolid: 'pool-dev',
+      removeMembers: true,
+    });
+
+    const detach = proxmox.requestsFor('PUT', '/pools/pool-dev')[0];
+    expect(detach.body.get('vms')).toBe('101,102');
+    expect(detach.body.get('storage')).toBe('local');
+    expect(detach.body.get('delete')).toBe('1');
+    expect(proxmox.requestsFor('DELETE', '/pools/pool-dev')).toHaveLength(1);
+    expect(output).toMatchObject({
+      removedMembers: ['guest 101', 'guest 102', 'storage local'],
+    });
+    // Detaching is not deleting: no guest or storage was removed.
+    expect(
+      proxmox.requests.filter(
+        r => r.method === 'DELETE' && r.path !== '/pools/pool-dev',
+      ),
+    ).toHaveLength(0);
+  });
+
+  it('reports an unknown pool as not found', async () => {
+    const proxmox = poolFake([], false);
+    const { invoke } = setupActions({ proxmox });
+
+    await expect(invoke('delete-pool', { poolid: 'pool-dev' })).rejects.toThrow(
+      /HTTP 404.*pool 'pool-dev' does not exist/s,
+    );
+  });
+
+  it('is destructive', async () => {
+    const { registry } = setupActions();
+    const { actions } = await registry.list();
+
+    expect(
+      actions.find(a => a.name === 'delete-pool')!.attributes.destructive,
+    ).toBe(true);
+  });
+});

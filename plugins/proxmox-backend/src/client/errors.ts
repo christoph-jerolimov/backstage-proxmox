@@ -45,6 +45,19 @@ export function proxmoxErrorMessage(
 }
 
 /**
+ * Proxmox answers a request for a guest of the wrong kind — asking the `qemu`
+ * path for a container's VMID, say — with a 500 about a missing configuration
+ * file rather than a 404. From the caller's point of view there is no such VM,
+ * so it is reported as not found.
+ */
+function isMissingConfigFile(status: number, detail: string): boolean {
+  return (
+    status === 500 &&
+    /[Cc]onfiguration file .*does ?n[o']?t exist/.test(detail)
+  );
+}
+
+/**
  * Maps a Proxmox API failure onto a Backstage error type, preserving the
  * status and the message Proxmox returned.
  */
@@ -83,6 +96,11 @@ export function proxmoxError(options: {
         `Proxmox reported a conflict for ${where}: ${detail}`,
       );
     default:
+      if (isMissingConfigFile(status, detail)) {
+        return new NotFoundError(
+          `Proxmox has no resource for ${where} (HTTP ${status}): ${detail}`,
+        );
+      }
       return new Error(
         `Proxmox request failed for ${where} (HTTP ${status}): ${detail}`,
       );
