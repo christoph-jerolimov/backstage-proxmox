@@ -110,11 +110,7 @@ export function containerFields(z: Zod) {
       .string()
       .min(1)
       .describe('Name of the Proxmox node, for example "pve"'),
-    vmid: z
-      .number()
-      .int()
-      .min(100)
-      .describe('Numeric id of the container'),
+    vmid: z.number().int().min(100).describe('Numeric id of the container'),
   };
 }
 

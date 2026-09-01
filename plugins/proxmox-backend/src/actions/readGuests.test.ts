@@ -62,7 +62,10 @@ describe('proxmox:get-vm', () => {
     );
     const { invoke } = setupActions({ proxmox });
 
-    const error: Error = await invoke('get-vm', { node: 'pve', vmid: 201 }).then(
+    const error: Error = await invoke('get-vm', {
+      node: 'pve',
+      vmid: 201,
+    }).then(
       () => {
         throw new Error('expected the action to fail');
       },
@@ -76,13 +79,18 @@ describe('proxmox:get-vm', () => {
 describe('proxmox:get-container', () => {
   it('reads a container and reports its hostname', async () => {
     const proxmox = FakeProxmox.create()
-      .on('GET', '/nodes/pve/lxc/201/status/current', { data: { status: 'stopped' } })
+      .on('GET', '/nodes/pve/lxc/201/status/current', {
+        data: { status: 'stopped' },
+      })
       .on('GET', '/nodes/pve/lxc/201/config', {
         data: { hostname: 'cache-01', memory: 512 },
       });
     const { invoke } = setupActions({ proxmox });
 
-    const { output } = await invoke('get-container', { node: 'pve', vmid: 201 });
+    const { output } = await invoke('get-container', {
+      node: 'pve',
+      vmid: 201,
+    });
 
     expect(output).toMatchObject({
       vmid: 201,

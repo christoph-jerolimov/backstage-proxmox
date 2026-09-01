@@ -168,6 +168,12 @@ Proxmox returns a task identifier (UPID) for operations it runs asynchronously. 
 - **WHEN** the action is invoked with an empty list of task identifiers
 - **THEN** the action succeeds without making any Proxmox request
 
+#### Scenario: Placeholders from a skipped dry-run step
+
+- **WHEN** the list contains the placeholder values a scaffolder dry run substitutes for the outputs of steps it skipped
+- **THEN** those entries are ignored rather than treated as task identifiers
+- **AND** any real task identifiers in the same list are still awaited
+
 #### Scenario: Malformed task identifier
 
 - **WHEN** a given identifier is not a Proxmox task identifier and no node can be read from it

@@ -25,7 +25,8 @@ async function readGuest(
 ) {
   const base = guestPath(node, guestType, vmid);
   const status = await client.get<GuestStatus>(`${base}/status/current`);
-  const config = (await client.get<Record<string, unknown>>(`${base}/config`)) ?? {};
+  const config =
+    (await client.get<Record<string, unknown>>(`${base}/config`)) ?? {};
 
   return {
     connectionTitle: client.connectionTitle,

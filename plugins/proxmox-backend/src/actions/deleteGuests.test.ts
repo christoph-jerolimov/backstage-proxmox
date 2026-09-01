@@ -16,7 +16,13 @@ function fake(guestType: 'qemu' | 'lxc', vmid: number, status: string) {
 
 describe.each([
   ['proxmox:delete-vm', 'delete-vm', 'qemu' as const, 101, 'VM'],
-  ['proxmox:delete-container', 'delete-container', 'lxc' as const, 201, 'container'],
+  [
+    'proxmox:delete-container',
+    'delete-container',
+    'lxc' as const,
+    201,
+    'container',
+  ],
 ])('%s', (_id, action, guestType, vmid, label) => {
   const base = `/nodes/pve/${guestType}/${vmid}`;
 
@@ -26,7 +32,11 @@ describe.each([
 
     const { output } = await invoke(action, { node: 'pve', vmid });
 
-    expect(output).toMatchObject({ vmid, taskId: DELETE_TASK, exitStatus: 'OK' });
+    expect(output).toMatchObject({
+      vmid,
+      taskId: DELETE_TASK,
+      exitStatus: 'OK',
+    });
     expect(proxmox.requestsFor('POST', `${base}/status/stop`)).toHaveLength(0);
   });
 

@@ -20,19 +20,19 @@
 
 ## 4. Templates
 
-- [ ] 4.1 Split, rename and add the per-action templates in `examples/proxmox-templates/` so each of the fourteen actions has exactly one single-step template; verify the template test's 1:1 assertion passes
-- [ ] 4.2 Add `examples/proxmox-templates/showcase/create-two-vms-and-wait.yaml` — two `create-vm` steps with `waitForCompletion: false`, then one `wait-for-tasks` step fed both task ids, with outputs reporting both VMIDs; verify it parses and its steps reference only registered action ids
-- [ ] 4.3 Update `templates.test.ts` to glob the top level for the per-action invariant and to check showcase templates separately (steps reference registered actions, parameters it collects are passed through); verify the suite passes
-- [ ] 4.4 Update the catalog locations in `app-config.yaml` for the renamed, split, added and showcase templates; verify a backend start lists all fifteen templates in the catalog
+- [x] 4.1 Split, rename and add the per-action templates in `examples/proxmox-templates/` so each of the fourteen actions has exactly one single-step template; verify the template test's 1:1 assertion passes
+- [x] 4.2 Add `examples/proxmox-templates/showcase/create-two-vms-and-wait.yaml` — two `create-vm` steps with `waitForCompletion: false`, then one `wait-for-tasks` step fed both task ids, with outputs reporting both VMIDs; verify it parses and its steps reference only registered action ids
+- [x] 4.3 Update `templates.test.ts` to glob the top level for the per-action invariant and to check showcase templates separately (steps reference registered actions, parameters it collects are passed through); verify the suite passes
+- [x] 4.4 Update the catalog locations in `app-config.yaml` for the renamed, split, added and showcase templates; verify a backend start lists all fifteen templates in the catalog
 
 ## 5. Documentation
 
-- [ ] 5.1 Update the README action table to the fourteen actions with their attributes, and document the create-many-then-wait pattern with the showcase template as the example; verify the table matches the registered actions one for one
-- [ ] 5.2 Document the removed action ids and their replacements in the README, including that `delete-pool` never deletes member guests or storages; verify a reader can migrate an existing template from the README alone
+- [x] 5.1 Update the README action table to the fourteen actions with their attributes, and document the create-many-then-wait pattern with the showcase template as the example; verify the table matches the registered actions one for one
+- [x] 5.2 Document the removed action ids and their replacements in the README, including that `delete-pool` never deletes member guests or storages; verify a reader can migrate an existing template from the README alone
 
 ## 6. Verification
 
-- [ ] 6.1 Run `yarn tsc`, `yarn lint:all`, `yarn prettier:check` on the changed files, and `CI=true yarn test`; verify all pass
-- [ ] 6.2 Run every per-action template and the showcase end to end through the scaffolder against a Proxmox stand-in; verify each completes with the expected outputs and that the showcase requests both VMs before awaiting either
-- [ ] 6.3 Verify dry-run behaviour: the read-only templates including `wait-for-tasks` dry-run, the destructive ones are skipped, and the showcase dry-runs with its create steps skipped and the awaiting step succeeding without polling
-- [ ] 6.4 Record the per-action verification outcomes in the README's verification section, keeping the note that a live Proxmox instance run is still outstanding
+- [x] 6.1 Run `yarn tsc`, `yarn lint:all`, `yarn prettier:check` on the changed files, and `CI=true yarn test`; verify all pass
+- [x] 6.2 Run every per-action template and the showcase end to end through the scaffolder against a Proxmox stand-in; verify each completes with the expected outputs and that the showcase requests both VMs before awaiting either
+- [x] 6.3 Verify dry-run behaviour: the read-only templates including `wait-for-tasks` dry-run, the destructive ones are skipped, and the showcase dry-runs with its create steps skipped and the awaiting step succeeding without polling
+- [x] 6.4 Record the per-action verification outcomes in the README's verification section, keeping the note that a live Proxmox instance run is still outstanding

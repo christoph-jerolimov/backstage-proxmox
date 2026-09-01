@@ -181,7 +181,9 @@ export function registerDeletePool(
           poolid: z.string(),
           removedMembers: z
             .array(z.string())
-            .describe('Members that were detached from the pool before it was removed'),
+            .describe(
+              'Members that were detached from the pool before it was removed',
+            ),
         }),
     },
     action: async ({ input, logger }) => {

@@ -39,7 +39,9 @@ async function deleteGuest(
 ) {
   const base = guestPath(input.node, guestType, input.vmid);
 
-  const current = await client.get<{ status?: string }>(`${base}/status/current`);
+  const current = await client.get<{ status?: string }>(
+    `${base}/status/current`,
+  );
   if (current?.status === 'running') {
     if (!input.stopIfRunning) {
       throw new ConflictError(
@@ -83,7 +85,10 @@ async function deleteGuest(
   };
 }
 
-function deleteOptions(z: Parameters<typeof connectionOutputField>[0], label: string) {
+function deleteOptions(
+  z: Parameters<typeof connectionOutputField>[0],
+  label: string,
+) {
   return {
     stopIfRunning: z
       .boolean()

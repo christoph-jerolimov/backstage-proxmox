@@ -30,7 +30,11 @@ describe('proxmox:set-vm-power-state', () => {
       state: 'start',
     });
 
-    expect(output).toMatchObject({ status: 'running', changed: true, taskId: TASK });
+    expect(output).toMatchObject({
+      status: 'running',
+      changed: true,
+      taskId: TASK,
+    });
   });
 
   it('does nothing when the VM is already in the requested state', async () => {
@@ -44,9 +48,9 @@ describe('proxmox:set-vm-power-state', () => {
     });
 
     expect(output).toMatchObject({ status: 'running', changed: false });
-    expect(proxmox.requestsFor('POST', '/nodes/pve/qemu/101/status/start')).toHaveLength(
-      0,
-    );
+    expect(
+      proxmox.requestsFor('POST', '/nodes/pve/qemu/101/status/start'),
+    ).toHaveLength(0);
   });
 
   it('accepts suspend and resume', async () => {

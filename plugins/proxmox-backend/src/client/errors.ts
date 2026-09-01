@@ -52,8 +52,7 @@ export function proxmoxErrorMessage(
  */
 function isMissingConfigFile(status: number, detail: string): boolean {
   return (
-    status === 500 &&
-    /[Cc]onfiguration file .*does ?n[o']?t exist/.test(detail)
+    status === 500 && /[Cc]onfiguration file .*does ?n[o']?t exist/.test(detail)
   );
 }
 

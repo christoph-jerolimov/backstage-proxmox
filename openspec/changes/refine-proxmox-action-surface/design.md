@@ -56,9 +56,13 @@ Behaviour details:
 - Results are collected with `Promise.allSettled`, so **every** failed or timed-out task appears in the error, not just the first to reject. `waitForProxmoxTask` keeps throwing on first failure for its single-task callers; the aggregation lives in the new action.
 - Output is `tasks: [{ taskId, node, exitStatus }]` plus the usual `connectionTitle`.
 
-### D5 — `taskIds` is optional and defaults to `[]`
+### D5 — `taskIds` is optional, defaults to `[]`, and ignores dry-run placeholders
 
-An empty list succeeds without polling. This is what makes the showcase template dry-runnable: in a dry run the create steps are skipped, so `${{ steps['create-a'].output.taskId }}` renders to nothing and the scaffolder drops the key. The trade-off is that a mistyped input silently no-ops instead of failing loudly. Accepted, because the alternative — a required `taskIds` — makes every template containing this action fail its dry run, which is the check most likely to catch a broken template before it touches real infrastructure.
+An empty list succeeds without polling, and the scaffolder's dry-run placeholder strings (`<example>`, `<unknown>`) are dropped from the list before anything is polled.
+
+The placeholders are the part that was got wrong on the first pass and corrected during implementation. A dry run does not simply omit a skipped step's outputs: `generateExampleOutput` in `@backstage/plugin-scaffolder-backend` synthesises them from the action's output JSON Schema, rendering a string as `"<example>"`, a number as `0` and a boolean as `false`. So the showcase's awaiting step receives `taskIds: ["<example>", "<example>"]`, which strict UPID validation rejects — failing the dry run of the very template the action exists for.
+
+Ignoring exactly those two strings was chosen over the two alternatives. Ignoring *any* unparseable entry would drop the guarantee that a mistyped task id fails loudly, letting a template report success having waited for nothing. Leaving the action strict and accepting a red dry run ships an example whose dry run fails, which is the check most likely to catch a broken template before it touches real infrastructure. The cost is that the action knows one scaffolder implementation detail; it is contained in a single constant and covered by a test.
 
 ### D6 — `wait-for-tasks` is read-only
 

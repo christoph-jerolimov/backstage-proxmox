@@ -215,13 +215,17 @@ describe('ProxmoxClient', () => {
     });
 
     it('maps a missing configuration file to not found', async () => {
-      const proxmox = FakeProxmox.create().on('GET', '/nodes/pve/qemu/201/config', {
-        status: 500,
-        errors: {
-          detail:
-            "Configuration file 'nodes/pve/qemu-server/201.conf' does not exist",
+      const proxmox = FakeProxmox.create().on(
+        'GET',
+        '/nodes/pve/qemu/201/config',
+        {
+          status: 500,
+          errors: {
+            detail:
+              "Configuration file 'nodes/pve/qemu-server/201.conf' does not exist",
+          },
         },
-      });
+      );
 
       const error: Error = await clientFor(tokenConnection, proxmox)
         .get('/nodes/pve/qemu/201/config')

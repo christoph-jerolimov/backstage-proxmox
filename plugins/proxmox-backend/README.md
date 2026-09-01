@@ -133,21 +133,71 @@ which may be left out when exactly one connection is configured, and reports
 (default `true`) and `timeoutSeconds` (default 300), and report the Proxmox
 task id (`taskId`).
 
-| Action                          | Read-only | Destructive | Idempotent | What it does                                          |
-| ------------------------------- | --------- | ----------- | ---------- | ----------------------------------------------------- |
-| `proxmox:list-nodes`            | yes       | no          | yes        | Lists cluster nodes with status and usage             |
-| `proxmox:get-guest`             | yes       | no          | yes        | Reads a VM or container's config and status           |
-| `proxmox:create-vm`             | no        | no          | no         | Creates a QEMU VM, allocating a VMID if none is given |
-| `proxmox:update-vm-config`      | no        | no          | yes        | Applies the given config fields to a VM               |
-| `proxmox:set-guest-power-state` | no        | **yes**     | no         | start / stop / shutdown / reboot / suspend / resume   |
-| `proxmox:delete-guest`          | no        | **yes**     | no         | Removes a VM or container                             |
-| `proxmox:create-lxc`            | no        | no          | no         | Creates an LXC container from an OS template          |
-| `proxmox:create-pool`           | no        | no          | no         | Creates a resource pool                               |
-| `proxmox:update-pool`           | no        | no          | yes        | Changes a pool's comment and adds members             |
+| Action                              | Read-only | Destructive | Idempotent | What it does                                          |
+| ----------------------------------- | --------- | ----------- | ---------- | ----------------------------------------------------- |
+| `proxmox:list-nodes`                | yes       | no          | yes        | Lists cluster nodes with status and usage             |
+| `proxmox:get-vm`                    | yes       | no          | yes        | Reads a VM's config and status                        |
+| `proxmox:get-container`             | yes       | no          | yes        | Reads a container's config and status                 |
+| `proxmox:create-vm`                 | no        | no          | no         | Creates a QEMU VM, allocating a VMID if none is given |
+| `proxmox:create-container`          | no        | no          | no         | Creates an LXC container from an OS template          |
+| `proxmox:update-vm-config`          | no        | no          | yes        | Applies the given config fields to a VM               |
+| `proxmox:set-vm-power-state`        | no        | **yes**     | no         | start / stop / shutdown / reboot / suspend / resume   |
+| `proxmox:set-container-power-state` | no        | **yes**     | no         | start / stop / shutdown / reboot                      |
+| `proxmox:delete-vm`                 | no        | **yes**     | no         | Removes a VM                                          |
+| `proxmox:delete-container`          | no        | **yes**     | no         | Removes a container                                   |
+| `proxmox:create-pool`               | no        | no          | no         | Creates a resource pool                               |
+| `proxmox:update-pool`               | no        | no          | yes        | Changes a pool's comment and adds members             |
+| `proxmox:delete-pool`               | no        | **yes**     | no         | Removes a pool. Never deletes its members             |
+| `proxmox:wait-for-tasks`            | yes       | no          | yes        | Waits for a list of Proxmox tasks to finish           |
+
+VMs and containers have separate actions rather than one action with a
+`guestType`, so each schema describes exactly one thing — a VM has `cores` and
+`sockets`, a container has `swap` and a rootfs, and Proxmox offers `suspend`
+and `resume` for VMs only.
 
 Only the read-only actions support scaffolder dry runs; a template containing a
 destructive step logs `Skipping because … does not support dry-run` instead of
 executing it.
+
+### Creating several resources at once
+
+Every write action waits for its Proxmox task by default, so a template that
+creates three VMs waits for each one before starting the next. To run them
+concurrently, disable the wait and await the tasks together:
+
+```yaml
+steps:
+  - id: create-first
+    action: proxmox:create-vm
+    input:
+      node: pve
+      name: web-01
+      waitForCompletion: false # returns as soon as Proxmox accepts it
+
+  - id: create-second
+    action: proxmox:create-vm
+    input:
+      node: pve
+      name: web-02
+      waitForCompletion: false
+
+  - id: wait
+    action: proxmox:wait-for-tasks
+    input:
+      taskIds:
+        - ${{ steps['create-first'].output.taskId }}
+        - ${{ steps['create-second'].output.taskId }}
+```
+
+`proxmox:wait-for-tasks` fails the run unless every task exited `OK`, and names
+**all** of the failures, not just the first. It reads each task's node from the
+task id, so nothing but the ids the earlier steps returned is needed. An empty
+list succeeds without doing anything, which is what keeps a template like this
+dry-runnable — in a dry run the create steps are skipped and no task ids reach
+the waiting step.
+
+`examples/proxmox-templates/showcase/create-two-vms-and-wait.yaml` is this
+pattern as a runnable template.
 
 ### Proxmox tasks
 
@@ -164,6 +214,28 @@ No action declares a `secrets` schema: the scaffolder invokes registry actions
 with `{ id, input, credentials }` only, so an action requiring secrets cannot
 be driven from a template. Credentials come from configuration instead, which
 also keeps them out of task inputs and logs.
+
+## Migrating from the earlier action names
+
+The guest actions used to take a `guestType` of `qemu` or `lxc`. They are now
+one action per guest kind, and the container create action was renamed to match:
+
+| Removed                         | Use instead                                                         |
+| ------------------------------- | ------------------------------------------------------------------- |
+| `proxmox:get-guest`             | `proxmox:get-vm` or `proxmox:get-container`                         |
+| `proxmox:set-guest-power-state` | `proxmox:set-vm-power-state` or `proxmox:set-container-power-state` |
+| `proxmox:delete-guest`          | `proxmox:delete-vm` or `proxmox:delete-container`                   |
+| `proxmox:create-lxc`            | `proxmox:create-container`                                          |
+
+Drop the `guestType` input; everything else is unchanged. Two details worth
+knowing: `get-vm` reports `name` where `get-container` reports `hostname`, and
+`set-container-power-state` does not offer `suspend` or `resume` — Proxmox does
+not support them for containers, so those requests failed at the API before and
+are now rejected as invalid input before any request is made.
+
+`proxmox:delete-pool` removes a pool only. Its member VMs, containers and
+storages are never deleted; `removeMembers` detaches them from the pool so the
+pool itself can be removed.
 
 ## Trying it out
 
@@ -192,24 +264,38 @@ real Proxmox API's exact responses; running the templates against a live
 instance is still worth doing before trusting this against production
 hardware, and needs a host with rootful podman.
 
-| Template                          | Action                          | Result against the stand-in                        |
-| --------------------------------- | ------------------------------- | -------------------------------------------------- |
-| Proxmox — List Nodes              | `proxmox:list-nodes`            | Returned the node with status and usage            |
-| Proxmox — Get Guest               | `proxmox:get-guest`             | Read VM 101 and container 201, config and status   |
-| Proxmox — Create VM               | `proxmox:create-vm`             | Allocated a VMID, created the VM, awaited the task |
-| Proxmox — Update VM Configuration | `proxmox:update-vm-config`      | Applied only the given field; others untouched     |
-| Proxmox — Set Guest Power State   | `proxmox:set-guest-power-state` | Started a stopped guest, reported it running       |
-| Proxmox — Delete Guest            | `proxmox:delete-guest`          | Stopped and removed a running guest                |
-| Proxmox — Create LXC Container    | `proxmox:create-lxc`            | Created the container from an OS template          |
-| Proxmox — Create Resource Pool    | `proxmox:create-pool`           | Created the pool                                   |
-| Proxmox — Update Resource Pool    | `proxmox:update-pool`           | Updated the comment and added a member             |
+| Template                                     | Action                                           | Result against the stand-in                        |
+| -------------------------------------------- | ------------------------------------------------ | -------------------------------------------------- |
+| Proxmox — List Nodes                         | `proxmox:list-nodes`                             | Returned the node with status and usage            |
+| Proxmox — Get VM                             | `proxmox:get-vm`                                 | Read VM 101, config and status                     |
+| Proxmox — Get Container                      | `proxmox:get-container`                          | Read container 201, reporting its hostname         |
+| Proxmox — Create VM                          | `proxmox:create-vm`                              | Allocated a VMID, created the VM, awaited the task |
+| Proxmox — Create Container                   | `proxmox:create-container`                       | Created the container from an OS template          |
+| Proxmox — Update VM Configuration            | `proxmox:update-vm-config`                       | Applied only the given field; others untouched     |
+| Proxmox — Set VM Power State                 | `proxmox:set-vm-power-state`                     | Started a stopped VM, reported it running          |
+| Proxmox — Set Container Power State          | `proxmox:set-container-power-state`              | Started a stopped container                        |
+| Proxmox — Delete VM                          | `proxmox:delete-vm`                              | Stopped and removed a running VM                   |
+| Proxmox — Delete Container                   | `proxmox:delete-container`                       | Removed a stopped container                        |
+| Proxmox — Create Resource Pool               | `proxmox:create-pool`                            | Created the pool                                   |
+| Proxmox — Update Resource Pool               | `proxmox:update-pool`                            | Updated the comment and added a member             |
+| Proxmox — Delete Resource Pool               | `proxmox:delete-pool`                            | Detached the member, then removed the pool         |
+| Proxmox — Wait for Tasks                     | `proxmox:wait-for-tasks`                         | Succeeded on an empty list without polling         |
+| Proxmox — Create Two VMs and Wait (showcase) | `proxmox:create-vm` ×2, `proxmox:wait-for-tasks` | Both VMs created and both tasks awaited            |
 
-Also confirmed end to end: leaving optional template parameters blank sends
-_only_ the filled-in fields to Proxmox (the create-VM run with just node and
-name posted `vmid` and `name` and nothing else); dry-running a read-only
-template executes its step, while a template containing
-`proxmox:delete-guest` logs `Skipping because proxmox:delete-guest does not
-support dry-run` and makes no Proxmox call.
+Also confirmed end to end:
+
+- **Concurrency.** In the showcase run, both `create-vm` requests were issued
+  before the first task poll — the creates do not serialise.
+- **Blank optional parameters.** Running the create-VM template with only node
+  and name posts exactly `vmid` and `name` to Proxmox, nothing empty.
+- **Dry runs.** The read-only templates (`list-nodes`, `get-vm`,
+  `get-container`, `wait-for-tasks`) execute; every destructive one logs
+  `Skipping because … does not support dry-run` and makes no Proxmox call. The
+  showcase dry-runs cleanly: its two create steps are skipped and the awaiting
+  step ignores the placeholder values the dry run substitutes for their
+  outputs, making no Proxmox call.
+- **Catalog.** All 15 templates register — 14 `proxmox-action`, one
+  `proxmox-showcase` — and all 14 actions appear in the scaffolder.
 
 ## Development
 

@@ -124,6 +124,31 @@ describe('proxmox:wait-for-tasks', () => {
     expect(proxmox.requests).toHaveLength(0);
   });
 
+  it('ignores the scaffolder dry-run placeholders', async () => {
+    const proxmox = tasks([[A, OK]]);
+    const { invoke } = setupActions({ proxmox });
+
+    const { output } = await invoke('wait-for-tasks', {
+      taskIds: ['<example>', '<unknown>'],
+    });
+
+    expect(output).toEqual({ connectionTitle: '', tasks: [] });
+    expect(proxmox.requests).toHaveLength(0);
+  });
+
+  it('still awaits the real task ids alongside a placeholder', async () => {
+    const proxmox = tasks([[A, OK]]);
+    const { invoke } = setupActions({ proxmox });
+
+    const { output } = await invoke('wait-for-tasks', {
+      taskIds: [A, '<example>'],
+    });
+
+    expect((output as any).tasks).toEqual([
+      { taskId: A, node: 'pve', exitStatus: 'OK' },
+    ]);
+  });
+
   it('rejects a malformed task id before polling anything', async () => {
     const proxmox = tasks([[A, OK]]);
     const { invoke } = setupActions({ proxmox });

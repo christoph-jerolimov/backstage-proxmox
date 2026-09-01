@@ -1,0 +1,87 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-create-two-vms-and-wait
+  title: Proxmox — Create Two VMs and Wait
+  description: |
+    Showcase: creates two Proxmox VMs without waiting for either, then waits
+    for both Proxmox tasks in a single step. This is what
+    `proxmox:wait-for-tasks` exists for — with `waitForCompletion` left on,
+    each create step would block before the next one started.
+  tags:
+    - proxmox
+    - showcase
+spec:
+  owner: user:guest
+  type: proxmox-showcase
+
+  parameters:
+    - title: Virtual machines
+      required:
+        - node
+        - firstName
+        - secondName
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        node:
+          title: Node
+          type: string
+          default: pve
+        firstName:
+          title: Name of the first VM
+          type: string
+          default: showcase-01
+        secondName:
+          title: Name of the second VM
+          type: string
+          default: showcase-02
+        memory:
+          title: Memory for both VMs (MiB)
+          type: number
+          default: 512
+
+  steps:
+    # Both creates return as soon as Proxmox accepts the request, so the
+    # second one is not waiting on the first.
+    - id: create-first
+      name: Request the first VM
+      action: proxmox:create-vm
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        name: ${{ parameters.firstName }}
+        memory: ${{ parameters.memory }}
+        waitForCompletion: false
+
+    - id: create-second
+      name: Request the second VM
+      action: proxmox:create-vm
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        name: ${{ parameters.secondName }}
+        memory: ${{ parameters.memory }}
+        waitForCompletion: false
+
+    # One step waits for both, and fails the run if either task failed.
+    - id: wait
+      name: Wait for both VMs
+      action: proxmox:wait-for-tasks
+      input:
+        connection: ${{ parameters.connection }}
+        taskIds:
+          - ${{ steps['create-first'].output.taskId }}
+          - ${{ steps['create-second'].output.taskId }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['create-first'].output.connectionTitle }}
+      - title: Created VMs
+        content: "${{ steps['create-first'].output.name }} (VMID ${{ steps['create-first'].output.vmid }}) and ${{ steps['create-second'].output.name }} (VMID ${{ steps['create-second'].output.vmid }})"
+      - title: Proxmox tasks
+        content: |
+          ${{ steps['wait'].output.tasks | dump }}

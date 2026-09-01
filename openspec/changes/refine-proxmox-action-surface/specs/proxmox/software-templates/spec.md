@@ -59,5 +59,5 @@ The system SHALL ship a template that creates more than one Proxmox resource wit
 #### Scenario: Dry-running the showcase
 
 - **WHEN** the showcase template is dry-run
-- **THEN** the create steps are skipped as destructive-by-default writes
-- **AND** the awaiting step receives no task identifiers and succeeds without polling Proxmox
+- **THEN** the create steps are skipped because they are not read-only
+- **AND** the awaiting step receives the placeholder values the dry run substitutes for their outputs, ignores them, and succeeds without polling Proxmox

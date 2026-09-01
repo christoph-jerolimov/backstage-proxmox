@@ -1,11 +1,11 @@
 apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
-  name: proxmox-create-lxc
+  name: proxmox-create-container
   title: Proxmox — Create LXC Container
   description: |
     Creates an LXC container on a Proxmox node from an OS template.
-    Invokes the `proxmox:create-lxc` action.
+    Invokes the `proxmox:create-container` action.
   tags:
     - proxmox
 spec:
@@ -80,7 +80,7 @@ spec:
   steps:
     - id: action
       name: Create container
-      action: proxmox:create-lxc
+      action: proxmox:create-container
       input:
         connection: ${{ parameters.connection }}
         node: ${{ parameters.node }}

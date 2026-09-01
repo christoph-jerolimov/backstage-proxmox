@@ -188,9 +188,9 @@ describe('Proxmox action registration', () => {
   it('rejects input that does not match the schema before calling Proxmox', async () => {
     const { invoke, proxmox } = setupActions();
 
-    await expect(
-      invoke('get-vm', { node: 'pve' }),
-    ).rejects.toThrow(/Invalid input/);
+    await expect(invoke('get-vm', { node: 'pve' })).rejects.toThrow(
+      /Invalid input/,
+    );
     expect(proxmox.requests).toHaveLength(0);
   });
 });

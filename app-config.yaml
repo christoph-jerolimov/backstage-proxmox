@@ -231,7 +231,11 @@ catalog:
       rules:
         - allow: [Template]
     - type: file
-      target: ../../examples/proxmox-templates/get-guest.yaml
+      target: ../../examples/proxmox-templates/get-vm.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/get-container.yaml
       rules:
         - allow: [Template]
     - type: file
@@ -239,19 +243,27 @@ catalog:
       rules:
         - allow: [Template]
     - type: file
+      target: ../../examples/proxmox-templates/create-container.yaml
+      rules:
+        - allow: [Template]
+    - type: file
       target: ../../examples/proxmox-templates/update-vm-config.yaml
       rules:
         - allow: [Template]
     - type: file
-      target: ../../examples/proxmox-templates/set-guest-power-state.yaml
+      target: ../../examples/proxmox-templates/set-vm-power-state.yaml
       rules:
         - allow: [Template]
     - type: file
-      target: ../../examples/proxmox-templates/delete-guest.yaml
+      target: ../../examples/proxmox-templates/set-container-power-state.yaml
       rules:
         - allow: [Template]
     - type: file
-      target: ../../examples/proxmox-templates/create-lxc.yaml
+      target: ../../examples/proxmox-templates/delete-vm.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/delete-container.yaml
       rules:
         - allow: [Template]
     - type: file
@@ -260,6 +272,20 @@ catalog:
         - allow: [Template]
     - type: file
       target: ../../examples/proxmox-templates/update-pool.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/delete-pool.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/wait-for-tasks.yaml
+      rules:
+        - allow: [Template]
+
+    # Showcase templates chain several actions in one run
+    - type: file
+      target: ../../examples/proxmox-templates/showcase/create-two-vms-and-wait.yaml
       rules:
         - allow: [Template]
 

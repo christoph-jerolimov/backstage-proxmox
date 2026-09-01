@@ -9,6 +9,15 @@ import {
   ProxmoxActionDeps,
 } from './helpers';
 
+/**
+ * Placeholders the scaffolder substitutes for the outputs of a step it skipped
+ * during a dry run (`generateExampleOutput` renders a string as `<example>`).
+ * A template that creates resources and then awaits them therefore reaches
+ * this action with placeholders rather than task ids, and dry-running it must
+ * not fail. Anything else that is not a task id still does.
+ */
+const DRY_RUN_PLACEHOLDERS = ['<example>', '<unknown>'];
+
 /** How many tasks are polled at once, so a long list stays well behaved. */
 const MAX_CONCURRENT_POLLS = 8;
 
@@ -90,8 +99,23 @@ export function registerWaitForTasks(
         }),
     },
     action: async ({ input, logger }) => {
+      const placeholders = input.taskIds.filter(taskId =>
+        DRY_RUN_PLACEHOLDERS.includes(taskId),
+      );
+      if (placeholders.length > 0) {
+        logger.info(
+          `Ignoring ${placeholders.length} dry-run placeholder(s) in taskIds; the steps that would have produced task ids were skipped`,
+        );
+      }
+
       // Duplicates would be polled and reported twice for no benefit.
-      const taskIds = [...new Set(input.taskIds)];
+      const taskIds = [
+        ...new Set(
+          input.taskIds.filter(
+            taskId => !DRY_RUN_PLACEHOLDERS.includes(taskId),
+          ),
+        ),
+      ];
 
       if (taskIds.length === 0) {
         // No connection is resolved: with nothing to poll there is nothing to
@@ -106,7 +130,9 @@ export function registerWaitForTasks(
         throw new InputError(
           `Not a Proxmox task id: ${malformed
             .map(taskId => `"${taskId}"`)
-            .join(', ')}. Task ids look like "UPID:<node>:...", as returned by the Proxmox actions.`,
+            .join(
+              ', ',
+            )}. Task ids look like "UPID:<node>:...", as returned by the Proxmox actions.`,
         );
       }
 
@@ -132,10 +158,7 @@ export function registerWaitForTasks(
               client,
               node,
               taskId,
-              timeoutSeconds: Math.max(
-                1,
-                Math.ceil((deadline - now()) / 1000),
-              ),
+              timeoutSeconds: Math.max(1, Math.ceil((deadline - now()) / 1000)),
               operation: `awaiting task ${taskId}`,
               sleep: deps.sleep,
             });

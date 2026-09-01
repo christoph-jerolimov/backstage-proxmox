@@ -63,7 +63,9 @@ async function setPowerState(
   logger: { info(message: string): void },
 ) {
   const base = guestPath(input.node, guestType, input.vmid);
-  const current = await client.get<{ status?: string }>(`${base}/status/current`);
+  const current = await client.get<{ status?: string }>(
+    `${base}/status/current`,
+  );
   const target = TARGET_STATUS[input.state];
 
   if (target && current?.status === target) {
