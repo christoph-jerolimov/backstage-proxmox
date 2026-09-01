@@ -158,12 +158,3 @@ export function requireAtLeastOneField(
     );
   }
 }
-
-/** The Proxmox API path segment for a guest type. */
-export function guestPath(
-  node: string,
-  guestType: 'qemu' | 'lxc',
-  vmid: number,
-) {
-  return `/nodes/${encodeURIComponent(node)}/${guestType}/${vmid}`;
-}

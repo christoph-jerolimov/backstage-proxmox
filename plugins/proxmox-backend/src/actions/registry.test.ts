@@ -41,30 +41,20 @@ describe('Proxmox action registration', () => {
     expect(attributes['update-pool'].idempotent).toBe(true);
   });
 
-  it('no longer registers the actions that were split or renamed', async () => {
-    const { registry } = setupActions();
-    const { actions } = await registry.list();
-    const names = actions.map(action => action.name);
-
-    for (const removed of [
-      'get-guest',
-      'set-guest-power-state',
-      'delete-guest',
-      'create-lxc',
-    ]) {
-      expect(names).not.toContain(removed);
-    }
-  });
-
-  it('has no action that discriminates on a guest type', async () => {
+  it('gives every action inputs of its own, with no kind discriminator', async () => {
     const { registry } = setupActions();
     const { actions } = await registry.list();
 
     for (const action of actions) {
-      expect([
-        action.name,
+      const properties = Object.keys(
         (action.schema.input as { properties?: object }).properties ?? {},
-      ]).toEqual([action.name, expect.not.objectContaining({ guestType: {} })]);
+      );
+      // Each action targets one kind of resource, so nothing selects between
+      // a VM and a container at call time.
+      expect([action.name, properties]).toEqual([
+        action.name,
+        expect.not.arrayContaining(['type', 'kind']),
+      ]);
     }
   });
 

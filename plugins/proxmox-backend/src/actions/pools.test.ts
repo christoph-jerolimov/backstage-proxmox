@@ -197,7 +197,7 @@ describe('proxmox:delete-pool', () => {
     const { invoke } = setupActions({ proxmox });
 
     await expect(invoke('delete-pool', { poolid: 'pool-dev' })).rejects.toThrow(
-      /still has 2 member\(s\): guest 101, storage local/,
+      /still has 2 member\(s\): VM 101, storage local/,
     );
     expect(proxmox.requestsFor('DELETE', '/pools/pool-dev')).toHaveLength(0);
   });
@@ -205,7 +205,7 @@ describe('proxmox:delete-pool', () => {
   it('detaches members first when asked to, without deleting them', async () => {
     const proxmox = poolFake([
       { vmid: 101, type: 'qemu' },
-      { vmid: 102, type: 'qemu' },
+      { vmid: 202, type: 'lxc' },
       { storage: 'local', type: 'storage' },
     ]);
     const { invoke } = setupActions({ proxmox });
@@ -216,14 +216,14 @@ describe('proxmox:delete-pool', () => {
     });
 
     const detach = proxmox.requestsFor('PUT', '/pools/pool-dev')[0];
-    expect(detach.body.get('vms')).toBe('101,102');
+    expect(detach.body.get('vms')).toBe('101,202');
     expect(detach.body.get('storage')).toBe('local');
     expect(detach.body.get('delete')).toBe('1');
     expect(proxmox.requestsFor('DELETE', '/pools/pool-dev')).toHaveLength(1);
     expect(output).toMatchObject({
-      removedMembers: ['guest 101', 'guest 102', 'storage local'],
+      removedMembers: ['VM 101', 'container 202', 'storage local'],
     });
-    // Detaching is not deleting: no guest or storage was removed.
+    // Detaching is not deleting: no VM, container or storage was removed.
     expect(
       proxmox.requests.filter(
         r => r.method === 'DELETE' && r.path !== '/pools/pool-dev',

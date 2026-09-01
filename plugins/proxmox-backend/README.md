@@ -112,7 +112,7 @@ are the real boundary — Backstage marks destructive actions so they are kept
 out of dry runs, but it does not otherwise gate who may run them. Give the
 service account exactly the privileges the actions you intend to use need. The
 seeded `svc-backstage@pve!readonly` token in `pve8`/`pve9` is read-only on
-purpose: `list-nodes` and `get-guest` work with it and every write is rejected
+purpose: `list-nodes` and `get-vm` work with it and every write is rejected
 with 403.
 
 ### TLS
@@ -150,8 +150,8 @@ task id (`taskId`).
 | `proxmox:delete-pool`               | no        | **yes**     | no         | Removes a pool. Never deletes its members             |
 | `proxmox:wait-for-tasks`            | yes       | no          | yes        | Waits for a list of Proxmox tasks to finish           |
 
-VMs and containers have separate actions rather than one action with a
-`guestType`, so each schema describes exactly one thing — a VM has `cores` and
+VMs and containers have separate actions rather than one action that switches
+on a kind, so each schema describes exactly one thing — a VM has `cores` and
 `sockets`, a container has `swap` and a rootfs, and Proxmox offers `suspend`
 and `resume` for VMs only.
 
@@ -215,23 +215,13 @@ with `{ id, input, credentials }` only, so an action requiring secrets cannot
 be driven from a template. Credentials come from configuration instead, which
 also keeps them out of task inputs and logs.
 
-## Migrating from the earlier action names
+## Behaviour worth knowing
 
-The guest actions used to take a `guestType` of `qemu` or `lxc`. They are now
-one action per guest kind, and the container create action was renamed to match:
+`get-vm` reports `name` where `get-container` reports `hostname`.
 
-| Removed                         | Use instead                                                         |
-| ------------------------------- | ------------------------------------------------------------------- |
-| `proxmox:get-guest`             | `proxmox:get-vm` or `proxmox:get-container`                         |
-| `proxmox:set-guest-power-state` | `proxmox:set-vm-power-state` or `proxmox:set-container-power-state` |
-| `proxmox:delete-guest`          | `proxmox:delete-vm` or `proxmox:delete-container`                   |
-| `proxmox:create-lxc`            | `proxmox:create-container`                                          |
-
-Drop the `guestType` input; everything else is unchanged. Two details worth
-knowing: `get-vm` reports `name` where `get-container` reports `hostname`, and
-`set-container-power-state` does not offer `suspend` or `resume` — Proxmox does
-not support them for containers, so those requests failed at the API before and
-are now rejected as invalid input before any request is made.
+`set-container-power-state` offers only `start`, `stop`, `shutdown` and
+`reboot`. Proxmox does not support suspending or resuming a container, so those
+requests are rejected as invalid input before any request is made.
 
 `proxmox:delete-pool` removes a pool only. Its member VMs, containers and
 storages are never deleted; `removeMembers` detaches them from the pool so the
@@ -249,10 +239,10 @@ source pve9/seed-output/tokens.env   # exports the seeded token values
 
 The seeded fixtures the templates default to: node `pve`, storages `local` and
 `backup`, pools `pool-dev` and `pool-prod`, VMs 101 (`web-01`) and 102
-(`db-01`), containers 201 (`cache-01`) and 202 (`proxy-01`). The seeded guests
-are config-only and cannot actually be started inside the container, so
-`proxmox:set-guest-power-state` will report the Proxmox task failure rather
-than a running guest there.
+(`db-01`), containers 201 (`cache-01`) and 202 (`proxy-01`). The seeded VMs and
+containers are config-only and cannot actually be started inside the container,
+so `proxmox:set-vm-power-state` will report the Proxmox task failure rather
+than a running VM there.
 
 ## Verification status
 

@@ -1,17 +1,83 @@
 import { ActionsRegistryService } from '@backstage/backend-plugin-api/alpha';
 import { resolveProxmoxTask } from '../client/tasks';
-import { resolveVmid } from './createVm';
 import {
   clientFor,
   connectionField,
   connectionOutputField,
+  containerFields,
   definedOnly,
   ProxmoxActionDeps,
   taskFields,
   taskOutputFields,
 } from './helpers';
+import {
+  CONTAINER_POWER_STATES,
+  deleteInstance,
+  deleteOptionFields,
+  deleteOutputFields,
+  powerOutputFields,
+  readInstance,
+  resolveVmid,
+  setPowerState,
+} from './lifecycle';
 
-export function registerCreateContainer(
+/** Every action that acts on an LXC container. */
+export function registerContainerActions(
+  actionsRegistry: ActionsRegistryService,
+  deps: ProxmoxActionDeps,
+): void {
+  registerGetContainer(actionsRegistry, deps);
+  registerCreateContainer(actionsRegistry, deps);
+  registerSetContainerPowerState(actionsRegistry, deps);
+  registerDeleteContainer(actionsRegistry, deps);
+}
+
+function registerGetContainer(
+  actionsRegistry: ActionsRegistryService,
+  deps: ProxmoxActionDeps,
+) {
+  actionsRegistry.register({
+    name: 'get-container',
+    title: 'Get Proxmox Container',
+    description:
+      'Reads the configuration and current status of a Proxmox LXC container.',
+    attributes: { readOnly: true, idempotent: true, destructive: false },
+    schema: {
+      input: z => z.object({ ...connectionField(z), ...containerFields(z) }),
+      output: z =>
+        z.object({
+          ...connectionOutputField(z),
+          node: z.string(),
+          vmid: z.number(),
+          hostname: z.string().optional().describe('Hostname of the container'),
+          status: z
+            .string()
+            .describe('Current status, for example "running" or "stopped"'),
+          uptime: z.number().optional().describe('Uptime in seconds'),
+          config: z
+            .record(z.any())
+            .describe('The container configuration as Proxmox reports it'),
+        }),
+    },
+    action: async ({ input }) => {
+      const client = await clientFor(deps, input.connection);
+      const container = await readInstance(
+        client,
+        input.node,
+        'lxc',
+        input.vmid,
+      );
+      return {
+        output: {
+          ...container,
+          hostname: container.config.hostname as string | undefined,
+        },
+      };
+    },
+  });
+}
+
+function registerCreateContainer(
   actionsRegistry: ActionsRegistryService,
   deps: ProxmoxActionDeps,
 ) {
@@ -138,5 +204,73 @@ export function registerCreateContainer(
         },
       };
     },
+  });
+}
+
+function registerSetContainerPowerState(
+  actionsRegistry: ActionsRegistryService,
+  deps: ProxmoxActionDeps,
+) {
+  actionsRegistry.register({
+    name: 'set-container-power-state',
+    title: 'Set Proxmox Container Power State',
+    description:
+      'Starts, stops, shuts down or reboots a Proxmox LXC container. Proxmox does not support suspending or resuming containers.',
+    attributes: { readOnly: false, idempotent: false, destructive: true },
+    schema: {
+      input: z =>
+        z.object({
+          ...connectionField(z),
+          ...containerFields(z),
+          state: z
+            .enum(CONTAINER_POWER_STATES)
+            .describe('The power state to bring the container to'),
+          ...taskFields(z),
+        }),
+      output: z => z.object(powerOutputFields(z, 'container')),
+    },
+    action: async ({ input, logger }) => ({
+      output: await setPowerState(
+        await clientFor(deps, input.connection),
+        deps,
+        'lxc',
+        'container',
+        input,
+        logger,
+      ),
+    }),
+  });
+}
+
+function registerDeleteContainer(
+  actionsRegistry: ActionsRegistryService,
+  deps: ProxmoxActionDeps,
+) {
+  actionsRegistry.register({
+    name: 'delete-container',
+    title: 'Delete Proxmox Container',
+    description:
+      'Removes a Proxmox LXC container. A running container is only removed when stopIfRunning is set.',
+    attributes: { readOnly: false, idempotent: false, destructive: true },
+    schema: {
+      input: z =>
+        z.object({
+          ...connectionField(z),
+          ...containerFields(z),
+          ...deleteOptionFields(z, 'container'),
+          ...taskFields(z),
+        }),
+      output: z => z.object(deleteOutputFields(z)),
+    },
+    action: async ({ input, logger }) => ({
+      output: await deleteInstance(
+        await clientFor(deps, input.connection),
+        deps,
+        'lxc',
+        'container',
+        input,
+        logger,
+      ),
+    }),
   });
 }

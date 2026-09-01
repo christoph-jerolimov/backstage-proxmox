@@ -45,7 +45,7 @@ export function proxmoxErrorMessage(
 }
 
 /**
- * Proxmox answers a request for a guest of the wrong kind — asking the `qemu`
+ * Proxmox answers a request for the wrong kind of instance — asking the `qemu`
  * path for a container's VMID, say — with a 500 about a missing configuration
  * file rather than a 404. From the caller's point of view there is no such VM,
  * so it is reported as not found.

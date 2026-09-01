@@ -23,7 +23,7 @@ export async function readPool(
 }
 
 /**
- * Adds guests and storages to a pool, skipping the ones that already belong to
+ * Adds VMs, containers and storages to a pool, skipping the ones that already belong to
  * it. Proxmox rejects a request that re-adds an existing member, so filtering
  * first is what makes adding a member twice a no-op rather than a failure.
  */

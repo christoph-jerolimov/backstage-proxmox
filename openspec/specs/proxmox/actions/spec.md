@@ -85,7 +85,7 @@ When the Proxmox API returns an error, the action SHALL fail with an error that 
 - **WHEN** the configured credentials lack the privilege for the requested operation and Proxmox answers 403
 - **THEN** the action fails with a permission error naming the operation and the connection
 
-#### Scenario: Unknown guest
+#### Scenario: Unknown VM
 
 - **WHEN** an action targets a VMID that does not exist and Proxmox answers 404
 - **THEN** the action fails with a not-found error naming the VMID and node
@@ -153,7 +153,7 @@ When the Proxmox API returns an error, the action SHALL fail with an error that 
 
 ### Requirement: Action — update VM configuration
 
-`proxmox:update-vm-config` SHALL modify the configuration of an existing QEMU VM, accepting any subset of name, cores, sockets, memory, tags, description and pool, and applying only the fields provided. It SHALL be idempotent and SHALL return the guest's configuration after the update.
+`proxmox:update-vm-config` SHALL modify the configuration of an existing QEMU VM, accepting any subset of name, cores, sockets, memory, tags, description and pool, and applying only the fields provided. It SHALL be idempotent and SHALL return the VM's configuration after the update.
 
 #### Scenario: Changing memory only
 
@@ -316,16 +316,16 @@ When the Proxmox API returns an error, the action SHALL fail with an error that 
 #### Scenario: Adding members
 
 - **WHEN** the action is invoked with a list of VMIDs to add
-- **THEN** those guests belong to the pool afterwards and the output lists the pool's members
+- **THEN** those VMs or containers belong to the pool afterwards and the output lists the pool's members
 
 #### Scenario: Adding a member twice
 
 - **WHEN** the same VMID is added in two consecutive invocations
-- **THEN** both invocations succeed and the guest appears once in the pool
+- **THEN** both invocations succeed and the member appears once in the pool
 
 ### Requirement: Action — delete resource pool
 
-`proxmox:delete-pool` SHALL remove a Proxmox resource pool. It SHALL be destructive. Because Proxmox refuses to remove a pool that still has members, the action SHALL fail with an error listing the members unless an option to detach them first is set, in which case members SHALL be removed from the pool before it is deleted. Deleting a pool SHALL NOT delete its member guests or storages.
+`proxmox:delete-pool` SHALL remove a Proxmox resource pool. It SHALL be destructive. Because Proxmox refuses to remove a pool that still has members, the action SHALL fail with an error listing the members unless an option to detach them first is set, in which case members SHALL be removed from the pool before it is deleted. Deleting a pool SHALL NOT delete its member VMs, containers or storages.
 
 #### Scenario: Deleting an empty pool
 
@@ -340,7 +340,7 @@ When the Proxmox API returns an error, the action SHALL fail with an error that 
 #### Scenario: Deleting a pool and detaching its members
 
 - **WHEN** the same call sets the detach option
-- **THEN** the members are removed from the pool, the pool is removed, and the guests and storages themselves still exist
+- **THEN** the members are removed from the pool, the pool is removed, and the VMs, containers and storages themselves still exist
 
 #### Scenario: Unknown pool
 

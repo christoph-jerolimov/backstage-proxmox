@@ -84,7 +84,7 @@ export function registerUpdatePool(
           vms: z
             .array(z.number().int().min(100))
             .optional()
-            .describe('VMIDs of guests to add to the pool'),
+            .describe('VMIDs of VMs or containers to add to the pool'),
           storages: z
             .array(z.string().min(1))
             .optional()
@@ -172,7 +172,7 @@ export function registerDeletePool(
             .optional()
             .default(false)
             .describe(
-              'Detach the pool members first instead of failing. The guests and storages themselves are not deleted.',
+              'Detach the pool members first instead of failing. The VMs, containers and storages themselves are not deleted.',
             ),
         }),
       output: z =>
@@ -193,11 +193,15 @@ export function registerDeletePool(
       // members are read first to fail with a message that names them.
       const pool = await readPool(client, input.poolid);
       const members = pool.members ?? [];
-      const memberLabels = members.map(member =>
-        typeof member.vmid === 'number'
-          ? `guest ${member.vmid}`
-          : `storage ${member.storage}`,
-      );
+      // Proxmox reports each member's own type, so the message can say what
+      // the member actually is rather than lumping both kinds together.
+      const memberLabels = members.map(member => {
+        if (typeof member.vmid !== 'number') {
+          return `storage ${member.storage}`;
+        }
+        const kind = member.type === 'lxc' ? 'container' : 'VM';
+        return `${kind} ${member.vmid}`;
+      });
 
       if (memberLabels.length > 0 && !input.removeMembers) {
         throw new ConflictError(

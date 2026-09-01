@@ -3,6 +3,114 @@ import { completedTask, setupActions } from '../__testUtils__/actionHarness';
 
 const CREATE_TASK = 'UPID:pve:0001:qmcreate:101:root@pam:';
 
+const POWER_TASK = 'UPID:pve:0003:qmstart:101:root@pam:';
+
+function powerFake(kind: 'qemu' | 'lxc', vmid: number, initial: string) {
+  let status = initial;
+  const base = `/nodes/pve/${kind}/${vmid}`;
+  const proxmox = FakeProxmox.create()
+    .on('GET', `${base}/status/current`, () => ({ data: { status } }))
+    .on('POST', `${base}/status/start`, () => {
+      status = 'running';
+      return { data: POWER_TASK };
+    })
+    .on('POST', `${base}/status/stop`, () => {
+      status = 'stopped';
+      return { data: POWER_TASK };
+    });
+  return completedTask(proxmox, 'pve', POWER_TASK);
+}
+
+const STOP_TASK = 'UPID:pve:0004:qmstop:101:root@pam:';
+const DELETE_TASK = 'UPID:pve:0005:qmdestroy:101:root@pam:';
+
+function deleteFake(kind: 'qemu' | 'lxc', vmid: number, status: string) {
+  const base = `/nodes/pve/${kind}/${vmid}`;
+  const proxmox = FakeProxmox.create()
+    .on('GET', `${base}/status/current`, { data: { status } })
+    .on('POST', `${base}/status/stop`, { data: STOP_TASK })
+    .on('DELETE', base, { data: DELETE_TASK });
+  completedTask(proxmox, 'pve', STOP_TASK);
+  return completedTask(proxmox, 'pve', DELETE_TASK);
+}
+
+describe('proxmox:get-vm', () => {
+  it('reads a VM', async () => {
+    const proxmox = FakeProxmox.create()
+      .on('GET', '/nodes/pve/qemu/101/status/current', {
+        data: { status: 'stopped', uptime: 0 },
+      })
+      .on('GET', '/nodes/pve/qemu/101/config', {
+        data: { name: 'web-01', cores: 2, memory: 2048 },
+      });
+    const { invoke } = setupActions({ proxmox });
+
+    const { output } = await invoke('get-vm', { node: 'pve', vmid: 101 });
+
+    expect(output).toMatchObject({
+      connectionTitle: 'Dev Proxmox',
+      vmid: 101,
+      name: 'web-01',
+      status: 'stopped',
+      config: { name: 'web-01', cores: 2, memory: 2048 },
+    });
+  });
+
+  it('takes only a connection, a node and a VMID', async () => {
+    const { registry } = setupActions();
+    const { actions } = await registry.list();
+    const action = actions.find(a => a.name === 'get-vm')!;
+
+    expect(
+      Object.keys(
+        (action.schema.input as { properties?: object }).properties ?? {},
+      ).sort(),
+    ).toEqual(['connection', 'node', 'vmid']);
+  });
+
+  it('reports an unknown VMID as not found', async () => {
+    const proxmox = FakeProxmox.create().on(
+      'GET',
+      '/nodes/pve/qemu/999/status/current',
+      { status: 404, errors: { vmid: 'VM 999 does not exist' } },
+    );
+    const { invoke } = setupActions({ proxmox });
+
+    await expect(invoke('get-vm', { node: 'pve', vmid: 999 })).rejects.toThrow(
+      /HTTP 404.*VM 999 does not exist/s,
+    );
+  });
+
+  it('reports a VMID that belongs to a container as not found', async () => {
+    // Proxmox answers the qemu path for a container's VMID with a 500 about a
+    // missing configuration file rather than a 404.
+    const proxmox = FakeProxmox.create().on(
+      'GET',
+      '/nodes/pve/qemu/201/status/current',
+      {
+        status: 500,
+        errors: {
+          detail:
+            "Configuration file 'nodes/pve/qemu-server/201.conf' does not exist",
+        },
+      },
+    );
+    const { invoke } = setupActions({ proxmox });
+
+    const error: Error = await invoke('get-vm', {
+      node: 'pve',
+      vmid: 201,
+    }).then(
+      () => {
+        throw new Error('expected the action to fail');
+      },
+      (e: Error) => e,
+    );
+
+    expect(error.name).toBe('NotFoundError');
+  });
+});
+
 describe('proxmox:create-vm', () => {
   function fakeWithCreate() {
     const proxmox = FakeProxmox.create().on('POST', '/nodes/pve/qemu', {
@@ -184,7 +292,7 @@ describe('proxmox:update-vm-config', () => {
     expect(proxmox.requests).toHaveLength(0);
   });
 
-  it('moves the VM into a pool without touching the guest config endpoint', async () => {
+  it('moves the VM into a pool without touching the VM config endpoint', async () => {
     const proxmox = fake()
       .on('GET', '/pools/pool-dev', { data: { members: [] } })
       .on('PUT', '/pools/pool-dev', { data: null });
@@ -205,53 +313,102 @@ describe('proxmox:update-vm-config', () => {
   });
 });
 
-describe('proxmox:create-container', () => {
-  const TASK = 'UPID:pve:0006:vzcreate:203:root@pam:';
-
-  it('creates a container and allocates a VMID', async () => {
-    const proxmox = FakeProxmox.create()
-      .on('GET', '/cluster/nextid', { data: '203' })
-      .on('POST', '/nodes/pve/lxc', { data: TASK });
-    completedTask(proxmox, 'pve', TASK);
+describe('proxmox:set-vm-power-state', () => {
+  it('starts a stopped VM', async () => {
+    const proxmox = powerFake('qemu', 101, 'stopped');
     const { invoke } = setupActions({ proxmox });
 
-    const { output } = await invoke('create-container', {
+    const { output } = await invoke('set-vm-power-state', {
       node: 'pve',
-      hostname: 'cache-02',
-      ostemplate: 'local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst',
-      storage: 'local',
-      rootfsSize: 4,
+      vmid: 101,
+      state: 'start',
     });
 
     expect(output).toMatchObject({
-      vmid: 203,
-      hostname: 'cache-02',
-      exitStatus: 'OK',
+      status: 'running',
+      changed: true,
+      taskId: POWER_TASK,
     });
-    const body = proxmox.requestsFor('POST', '/nodes/pve/lxc')[0].body;
-    expect(body.get('rootfs')).toBe('local:4');
-    expect(body.get('ostemplate')).toBe(
-      'local:vztmpl/debian-12-standard_12.7-1_amd64.tar.zst',
-    );
   });
 
-  it('surfaces a missing OS template', async () => {
-    const proxmox = FakeProxmox.create()
-      .on('GET', '/cluster/nextid', { data: '203' })
-      .on('POST', '/nodes/pve/lxc', {
-        status: 500,
-        errors: {
-          ostemplate: "volume 'local:vztmpl/nope.tar.zst' does not exist",
-        },
-      });
+  it('does nothing when the VM is already in the requested state', async () => {
+    const proxmox = powerFake('qemu', 101, 'running');
+    const { invoke } = setupActions({ proxmox });
+
+    const { output } = await invoke('set-vm-power-state', {
+      node: 'pve',
+      vmid: 101,
+      state: 'start',
+    });
+
+    expect(output).toMatchObject({ status: 'running', changed: false });
+    expect(
+      proxmox.requestsFor('POST', '/nodes/pve/qemu/101/status/start'),
+    ).toHaveLength(0);
+  });
+
+  it('accepts suspend and resume', async () => {
+    const { registry } = setupActions();
+    const { actions } = await registry.list();
+    const states = (
+      actions.find(a => a.name === 'set-vm-power-state')!.schema.input as any
+    ).properties.state.enum;
+
+    expect(states).toEqual([
+      'start',
+      'stop',
+      'shutdown',
+      'reboot',
+      'suspend',
+      'resume',
+    ]);
+  });
+});
+
+describe('proxmox:delete-vm', () => {
+  it('deletes a stopped VM', async () => {
+    const proxmox = deleteFake('qemu', 101, 'stopped');
+    const { invoke } = setupActions({ proxmox });
+
+    const { output } = await invoke('delete-vm', { node: 'pve', vmid: 101 });
+
+    expect(output).toMatchObject({
+      vmid: 101,
+      taskId: DELETE_TASK,
+      exitStatus: 'OK',
+    });
+    expect(
+      proxmox.requestsFor('POST', '/nodes/pve/qemu/101/status/stop'),
+    ).toHaveLength(0);
+  });
+
+  it('refuses to delete a running VM', async () => {
+    const proxmox = deleteFake('qemu', 101, 'running');
     const { invoke } = setupActions({ proxmox });
 
     await expect(
-      invoke('create-container', {
-        node: 'pve',
-        hostname: 'cache-02',
-        ostemplate: 'local:vztmpl/nope.tar.zst',
-      }),
-    ).rejects.toThrow(/nope.tar.zst' does not exist/);
+      invoke('delete-vm', { node: 'pve', vmid: 101 }),
+    ).rejects.toThrow(/VM 101 on node pve is running; set stopIfRunning/);
+    expect(proxmox.requestsFor('DELETE', '/nodes/pve/qemu/101')).toHaveLength(
+      0,
+    );
+  });
+
+  it('stops a running VM first when asked to', async () => {
+    const proxmox = deleteFake('qemu', 101, 'running');
+    const { invoke } = setupActions({ proxmox });
+
+    await invoke('delete-vm', {
+      node: 'pve',
+      vmid: 101,
+      stopIfRunning: true,
+    });
+
+    expect(
+      proxmox.requestsFor('POST', '/nodes/pve/qemu/101/status/stop'),
+    ).toHaveLength(1);
+    expect(proxmox.requestsFor('DELETE', '/nodes/pve/qemu/101')).toHaveLength(
+      1,
+    );
   });
 });

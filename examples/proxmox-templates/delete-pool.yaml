@@ -28,7 +28,7 @@ spec:
         removeMembers:
           title: Detach the pool members first instead of failing
           type: boolean
-          description: The guests and storages themselves are not deleted.
+          description: The VMs, containers and storages themselves are not deleted.
           default: false
 
   steps:

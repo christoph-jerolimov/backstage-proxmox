@@ -1,7 +1,5 @@
 import { ActionsRegistryService } from '@backstage/backend-plugin-api/alpha';
-import { registerCreateContainer } from './createContainer';
-import { registerCreateVm } from './createVm';
-import { registerDeleteContainer, registerDeleteVm } from './deleteGuests';
+import { registerContainerActions } from './containers';
 import { ProxmoxActionDeps } from './helpers';
 import { registerListNodes } from './listNodes';
 import {
@@ -9,12 +7,7 @@ import {
   registerDeletePool,
   registerUpdatePool,
 } from './pools';
-import {
-  registerSetContainerPowerState,
-  registerSetVmPowerState,
-} from './powerState';
-import { registerGetContainer, registerGetVm } from './readGuests';
-import { registerUpdateVmConfig } from './updateVmConfig';
+import { registerVmActions } from './vms';
 import { registerWaitForTasks } from './waitForTasks';
 
 export { type ProxmoxActionDeps } from './helpers';
@@ -26,19 +19,8 @@ export function registerProxmoxActions(
 ): void {
   registerListNodes(actionsRegistry, deps);
 
-  registerGetVm(actionsRegistry, deps);
-  registerGetContainer(actionsRegistry, deps);
-
-  registerCreateVm(actionsRegistry, deps);
-  registerCreateContainer(actionsRegistry, deps);
-
-  registerUpdateVmConfig(actionsRegistry, deps);
-
-  registerSetVmPowerState(actionsRegistry, deps);
-  registerSetContainerPowerState(actionsRegistry, deps);
-
-  registerDeleteVm(actionsRegistry, deps);
-  registerDeleteContainer(actionsRegistry, deps);
+  registerVmActions(actionsRegistry, deps);
+  registerContainerActions(actionsRegistry, deps);
 
   registerCreatePool(actionsRegistry, deps);
   registerUpdatePool(actionsRegistry, deps);
@@ -51,13 +33,13 @@ export function registerProxmoxActions(
 export const PROXMOX_ACTION_NAMES = [
   'list-nodes',
   'get-vm',
-  'get-container',
   'create-vm',
-  'create-container',
   'update-vm-config',
   'set-vm-power-state',
-  'set-container-power-state',
   'delete-vm',
+  'get-container',
+  'create-container',
+  'set-container-power-state',
   'delete-container',
   'create-pool',
   'update-pool',
