@@ -1,0 +1,36 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-list-nodes
+  title: Proxmox — List Nodes
+  description: |
+    Lists the nodes of a Proxmox VE cluster.
+    Invokes the `proxmox:list-nodes` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Proxmox instance
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+
+  steps:
+    - id: action
+      name: List nodes
+      action: proxmox:list-nodes
+      input:
+        connection: ${{ parameters.connection }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Nodes
+        content: |
+          ${{ steps['action'].output.nodes | dump }}

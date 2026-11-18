@@ -1,0 +1,53 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-get-vm
+  title: Proxmox — Get VM
+  description: |
+    Reads the configuration and status of a Proxmox QEMU virtual machine.
+    Invokes the `proxmox:get-vm` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Virtual machine
+      required:
+        - node
+        - vmid
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        node:
+          title: Node
+          type: string
+          description: Name of the Proxmox node
+          default: pve
+        vmid:
+          title: VMID
+          type: number
+          description: Numeric id of the virtual machine
+          default: 101
+
+  steps:
+    - id: action
+      name: Read VM
+      action: proxmox:get-vm
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        vmid: ${{ parameters.vmid }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: VM
+        content: "${{ steps['action'].output.name }} (VMID ${{ steps['action'].output.vmid }}) is ${{ steps['action'].output.status }}"
+      - title: Configuration
+        content: |
+          ${{ steps['action'].output.config | dump }}

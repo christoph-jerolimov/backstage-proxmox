@@ -1,0 +1,59 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-delete-container
+  title: Proxmox — Delete Container
+  description: |
+    Removes a Proxmox container. This is destructive.
+    Invokes the `proxmox:delete-container` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Container
+      required:
+        - node
+        - vmid
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        node:
+          title: Node
+          type: string
+          default: pve
+        vmid:
+          title: VMID
+          type: number
+        stopIfRunning:
+          title: Stop the container first when it is running
+          type: boolean
+          default: false
+        purge:
+          title: Also remove it from backup jobs and HA configuration
+          type: boolean
+          default: false
+
+  steps:
+    - id: action
+      name: Delete container
+      action: proxmox:delete-container
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        vmid: ${{ parameters.vmid }}
+        stopIfRunning: ${{ parameters.stopIfRunning }}
+        purge: ${{ parameters.purge }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Deleted container
+        content: "VMID ${{ steps['action'].output.vmid }} on node ${{ steps['action'].output.node }}"
+      - title: Proxmox task
+        content: ${{ steps['action'].output.taskId }}

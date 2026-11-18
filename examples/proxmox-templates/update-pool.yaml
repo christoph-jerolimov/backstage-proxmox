@@ -1,0 +1,64 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-update-pool
+  title: Proxmox — Update Resource Pool
+  description: |
+    Changes a Proxmox resource pool's comment and adds VMs or storages to it.
+    Invokes the `proxmox:update-pool` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Resource pool
+      required:
+        - poolid
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        poolid:
+          title: Pool id
+          type: string
+          default: pool-dev
+    - title: Changes
+      description: Fill in at least one field.
+      properties:
+        comment:
+          title: Comment
+          type: string
+        vms:
+          title: VMIDs to add
+          type: array
+          items:
+            type: number
+        storages:
+          title: Storages to add
+          type: array
+          items:
+            type: string
+
+  steps:
+    - id: action
+      name: Update pool
+      action: proxmox:update-pool
+      input:
+        connection: ${{ parameters.connection }}
+        poolid: ${{ parameters.poolid }}
+        comment: ${{ parameters.comment }}
+        vms: ${{ parameters.vms }}
+        storages: ${{ parameters.storages }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Updated pool
+        content: ${{ steps['action'].output.poolid }}
+      - title: Members
+        content: |
+          ${{ steps['action'].output.members | dump }}

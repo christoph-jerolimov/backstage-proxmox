@@ -1,0 +1,53 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-get-container
+  title: Proxmox — Get Container
+  description: |
+    Reads the configuration and status of a Proxmox LXC container.
+    Invokes the `proxmox:get-container` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Container
+      required:
+        - node
+        - vmid
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        node:
+          title: Node
+          type: string
+          description: Name of the Proxmox node
+          default: pve
+        vmid:
+          title: VMID
+          type: number
+          description: Numeric id of the container
+          default: 201
+
+  steps:
+    - id: action
+      name: Read container
+      action: proxmox:get-container
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        vmid: ${{ parameters.vmid }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Container
+        content: "${{ steps['action'].output.hostname }} (VMID ${{ steps['action'].output.vmid }}) is ${{ steps['action'].output.status }}"
+      - title: Configuration
+        content: |
+          ${{ steps['action'].output.config | dump }}

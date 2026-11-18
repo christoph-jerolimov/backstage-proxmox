@@ -1,0 +1,59 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-delete-vm
+  title: Proxmox — Delete VM
+  description: |
+    Removes a Proxmox VM. This is destructive.
+    Invokes the `proxmox:delete-vm` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Virtual machine
+      required:
+        - node
+        - vmid
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        node:
+          title: Node
+          type: string
+          default: pve
+        vmid:
+          title: VMID
+          type: number
+        stopIfRunning:
+          title: Stop the VM first when it is running
+          type: boolean
+          default: false
+        purge:
+          title: Also remove it from backup jobs and HA configuration
+          type: boolean
+          default: false
+
+  steps:
+    - id: action
+      name: Delete VM
+      action: proxmox:delete-vm
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        vmid: ${{ parameters.vmid }}
+        stopIfRunning: ${{ parameters.stopIfRunning }}
+        purge: ${{ parameters.purge }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Deleted VM
+        content: "VMID ${{ steps['action'].output.vmid }} on node ${{ steps['action'].output.node }}"
+      - title: Proxmox task
+        content: ${{ steps['action'].output.taskId }}

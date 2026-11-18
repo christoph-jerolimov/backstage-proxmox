@@ -1,0 +1,50 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-wait-for-tasks
+  title: Proxmox — Wait for Tasks
+  description: |
+    Waits for a list of Proxmox tasks (UPIDs) to finish and fails unless every
+    one of them succeeded. Invokes the `proxmox:wait-for-tasks` action.
+    See the "Create Two VMs and Wait" showcase template for the pattern this
+    action exists for.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Tasks
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        taskIds:
+          title: Task ids
+          type: array
+          description: Proxmox task ids, as returned by the other Proxmox actions.
+          items:
+            type: string
+        timeoutSeconds:
+          title: Timeout (seconds)
+          type: number
+          description: How long to wait for all of the tasks together
+
+  steps:
+    - id: action
+      name: Wait for tasks
+      action: proxmox:wait-for-tasks
+      input:
+        connection: ${{ parameters.connection }}
+        taskIds: ${{ parameters.taskIds }}
+        timeoutSeconds: ${{ parameters.timeoutSeconds }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: Tasks
+        content: |
+          ${{ steps['action'].output.tasks | dump }}

@@ -1,0 +1,63 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: proxmox-set-vm-power-state
+  title: Proxmox — Set VM Power State
+  description: |
+    Starts, stops, shuts down, reboots, suspends or resumes a Proxmox QEMU virtual machine.
+    Invokes the `proxmox:set-vm-power-state` action.
+  tags:
+    - proxmox
+spec:
+  owner: user:guest
+  type: proxmox-action
+
+  parameters:
+    - title: Virtual machine
+      required:
+        - node
+        - vmid
+        - state
+      properties:
+        connection:
+          title: Connection
+          type: string
+          description: Title or host of the Proxmox connection. Leave empty when only one is configured.
+        node:
+          title: Node
+          type: string
+          default: pve
+        vmid:
+          title: VMID
+          type: number
+          default: 101
+        state:
+          title: Power state
+          type: string
+          enum:
+            - start
+            - stop
+            - shutdown
+            - reboot
+            - suspend
+            - resume
+          default: start
+
+  steps:
+    - id: action
+      name: Set power state
+      action: proxmox:set-vm-power-state
+      input:
+        connection: ${{ parameters.connection }}
+        node: ${{ parameters.node }}
+        vmid: ${{ parameters.vmid }}
+        state: ${{ parameters.state }}
+
+  output:
+    text:
+      - title: Proxmox instance
+        content: ${{ steps['action'].output.connectionTitle }}
+      - title: VM status
+        content: "VMID ${{ steps['action'].output.vmid }} is ${{ steps['action'].output.status }} (changed: ${{ steps['action'].output.changed }})"
+      - title: Proxmox task
+        content: ${{ steps['action'].output.taskId }}

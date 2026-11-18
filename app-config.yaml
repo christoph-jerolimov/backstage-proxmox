@@ -130,6 +130,7 @@ backend:
       - auth
       - catalog
       - scaffolder
+      - proxmox
   # workingDirectory: /tmp # Use this to configure a working directory for the scaffolder, defaults to the OS temp-dir
 
 integrations:
@@ -142,6 +143,23 @@ integrations:
     # - host: ghe.example.net
     #   apiBaseUrl: https://ghe.example.net/api/v3
     #   token: ${GHE_TOKEN}
+
+### Connections to external systems, read by plugins that support them.
+### The Proxmox plugin picks up every entry with "type: proxmox" here (and
+### accepts the same entries under the "proxmox.connections" key). The example
+### below matches the local dev instances in pve8/ and pve9/ — uncomment it and
+### export PROXMOX_TOKEN_SECRET to try the Proxmox software templates.
+# connections:
+#   - type: proxmox
+#     title: Local dev Proxmox
+#     baseUrl: https://localhost:8006
+#     # The dev instances use a self-signed certificate. Never do this against
+#     # a real Proxmox host.
+#     skipTlsVerify: true
+#     auth:
+#       - method: token
+#         tokenId: root@pam!full-access
+#         secret: ${PROXMOX_TOKEN_SECRET}
 
 proxy:
   ### Example for how to add a proxy endpoint for the frontend.
@@ -205,6 +223,71 @@ catalog:
       target: ../../examples/org.yaml
       rules:
         - allow: [User, Group]
+
+    # One software template per Proxmox action, for testing the actions
+    # against the dev instances in pve8/ and pve9/
+    - type: file
+      target: ../../examples/proxmox-templates/list-nodes.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/get-vm.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/get-container.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/create-vm.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/create-container.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/update-vm-config.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/set-vm-power-state.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/set-container-power-state.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/delete-vm.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/delete-container.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/create-pool.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/update-pool.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/delete-pool.yaml
+      rules:
+        - allow: [Template]
+    - type: file
+      target: ../../examples/proxmox-templates/wait-for-tasks.yaml
+      rules:
+        - allow: [Template]
+
+    # Showcase templates chain several actions in one run
+    - type: file
+      target: ../../examples/proxmox-templates/showcase/create-two-vms-and-wait.yaml
+      rules:
+        - allow: [Template]
 
     ## Uncomment these lines to add more example data
     # - type: url
